@@ -1,14 +1,13 @@
 ;;; vline.el --- Show vertical line (column highlighting) mode
 
-;; Copyright (C) 2002, 2008-2012 by Taiki SUGAWARA <buzz.taiki@gmail.com>
+;; Copyright (C) 2002, 2008-2021 by Taiki SUGAWARA <buzz.taiki@gmail.com>
 
 ;; Author: Taiki SUGAWARA <buzz.taiki@gmail.com>
 ;; Maintainer: Taiki SUGAWARA <buzz.taiki@gmail.com>
 ;; Keywords: faces, editing, emulating
 ;; Version: 1.11
-;; Time-stamp: <2012-01-08 12:40:18 UTC taiki>
-;; URL: http://www.emacswiki.org/cgi-bin/wiki/vline.el
-;; URL: http://bitbucket.org/buzztaiki/elisp/src/tip/vline.el
+;; URL: https://www.emacswiki.org/emacs/VlineMode
+;; URL: https://github.com/buzztaiki/vline
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -379,10 +378,4 @@ if `truncate-lines' is non-nil."
 	    (vline-forward -1)))))))
 
 (provide 'vline)
-
-;;; Local Variables:
-;;; time-stamp-format: "%:y-%02m-%02d %02H:%02M:%02S %Z %u"
-;;; time-stamp-line-limit: 16
-;;; End:
-
 ;;; vline.el ends here
