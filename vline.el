@@ -1,4 +1,4 @@
-;;; vline.el --- show vertical line (column highlighting) mode.
+;;; vline.el --- Show vertical line (column highlighting) mode
 
 ;; Copyright (C) 2002, 2008-2012 by Taiki SUGAWARA <buzz.taiki@gmail.com>
 
@@ -298,8 +298,7 @@ if `truncate-lines' is non-nil."
 		    (< i (window-height))
 		    (< i (length vline-overlay-table))
 		    (not (bobp)))
-	  (let ((cur-column (vline-move-to-column column t))
-		(cur-lcolumn (current-column)))
+	  (let ((cur-column (vline-move-to-column column t)))
 	    ;; non-cursor line only (workaround of eol probrem.
 	    (unless (= (point) point)
 	      ;; if column over the cursor's column (when tab or wide char is appered.
