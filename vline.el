@@ -1,4 +1,4 @@
-;;; vline.el --- column highlighting (vertical line displaying) mode -*- lexical-binding: t -*-
+;;; vline.el --- Column highlighting (vertical line displaying) mode -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2002, 2008-2021 by Taiki SUGAWARA <buzz.taiki@gmail.com>
 
@@ -6,6 +6,7 @@
 ;; Maintainer: Taiki SUGAWARA <buzz.taiki@gmail.com>
 ;; Keywords: faces, editing, emulating
 ;; Version: 1.11
+;; Package-Requires: ((emacs "24.3"))
 ;; URL: https://www.emacswiki.org/emacs/VlineMode
 ;; URL: https://github.com/buzztaiki/vline
 
