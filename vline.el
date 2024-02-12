@@ -33,6 +33,7 @@
 ;;; Change Log:
 
 ;; 2024-02-12 James Cherti
+;; Update vline using the after-change-functions hook
 ;; Bug fix: Add an alternative to (window-height) that takes into consideration text scaling
 ;; Replace ? with ?\
 ;; Reindented the code for improved readability
@@ -162,11 +163,15 @@ if `truncate-lines' is non-nil."
         (add-hook 'pre-command-hook 'vline-pre-command-hook nil t)
         (if vline-use-timer
             (vline-set-timer)
-          (add-hook 'post-command-hook 'vline-post-command-hook nil t)))
-    (vline-cancel-timer)
-    (vline-clear)
-    (remove-hook 'pre-command-hook 'vline-pre-command-hook t)
-    (remove-hook 'post-command-hook 'vline-post-command-hook t)))
+          (progn
+            (add-hook 'after-change-functions 'vline-after-change-functions nil t)
+            (add-hook 'post-command-hook 'vline-post-command-hook nil t))))
+    (progn
+      (vline-cancel-timer)
+      (vline-clear)
+      (remove-hook 'after-change-functions 'vline-after-change-functions)
+      (remove-hook 'pre-command-hook 'vline-pre-command-hook t)
+      (remove-hook 'post-command-hook 'vline-post-command-hook t))))
 
 ;;;###autoload
 (define-global-minor-mode vline-global-mode
@@ -183,6 +188,9 @@ if `truncate-lines' is non-nil."
 (defun vline-post-command-hook ()
   (when (and vline-mode (not (minibufferp)))
     (vline-show)))
+
+(defun vline-after-change-functions (beg end len)
+  (vline-post-command-hook))
 
 (defun vline-set-timer ()
   (setq vline-timer
