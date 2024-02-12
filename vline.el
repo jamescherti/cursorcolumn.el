@@ -32,6 +32,11 @@
 
 ;;; Change Log:
 
+;; 2024-02-12 James Cherti
+;; Bug fix: Add an alternative to (window-height) that takes into consideration text scaling
+;; Replace ? with ?\
+;; Reindented the code for improved readability
+
 ;; 2012-01-08 taiki
 ;; fix for the Lint warnings.
 
@@ -278,7 +283,7 @@ as text scaling."
              (i 0)
              (compose-p (memq vline-style '(compose mixed)))
              (face-p (memq vline-style '(face mixed)))
-             (line-char (if compose-p vline-line-char ? ))
+             (line-char (if compose-p vline-line-char ?\ ))
              (line-str (make-string 1 line-char))
              (visual-line-str line-str)
              (window-height (vline--calculate-window-visible-lines))
@@ -305,7 +310,7 @@ as text scaling."
                                    (> lcolumn (+ (current-column)
                                                  (- column cur-column)))))
                      ;; consider a newline, tab and wide char.
-                     (str (concat (make-string (- column cur-column) ? )
+                     (str (concat (make-string (- column cur-column) ?\ )
                                   (if visual-p visual-line-str line-str)))
                      (char (char-after)))
                 ;; create overlay if not found.
@@ -333,7 +338,7 @@ as text scaling."
                                                                 (current-column))
                                                 (current-column)
                                                 (string-width str))
-                                             ? )))
+                                             ?\ )))
                   (move-overlay ovr (point) (1+ (point)))
                   (overlay-put ovr 'invisible t)
                   (overlay-put ovr 'after-string str))
