@@ -258,6 +258,14 @@ if `truncate-lines' is non-nil."
       vline-visual-face
     vline-face))
 
+(defun vline--calculate-window-visible-lines ()
+  "A more accurate alternative to (window-height) is one that calculates the number of
+lines in the current window, taking into consideration other changes in the window, such
+as text scaling."
+  (let ((beginning-line (line-number-at-pos (window-start)))
+        (end-line (line-number-at-pos (window-end))))
+    (+ 1 (- end-line beginning-line))))
+
 (defun vline-show (&optional point)
   (vline-clear)
   (save-window-excursion
@@ -273,6 +281,7 @@ if `truncate-lines' is non-nil."
              (line-char (if compose-p vline-line-char ? ))
              (line-str (make-string 1 line-char))
              (visual-line-str line-str)
+             (window-height (vline--calculate-window-visible-lines))
              (in-fringe-p (vline-into-fringe-p)))
         (when face-p
           (setq line-str (propertize line-str 'face (vline-face nil)))
@@ -280,7 +289,7 @@ if `truncate-lines' is non-nil."
         (goto-char (window-end nil t))
         (vline-forward 0)
         (while (and (not in-fringe-p)
-                    (< i (window-height))
+                    (< i window-height)
                     (< i (length vline-overlay-table))
                     (not (bobp)))
           (let ((cur-column (vline-move-to-column column t)))
