@@ -82,20 +82,20 @@
 (defvar vline-multiwidth-space-list
   (list
    ?\t
-   (decode-char 'ucs #x3000)		; japanese fullwidth space
+   (decode-char 'ucs #x3000)    ; japanese fullwidth space
    ))
 (defvar vline-timer nil)
 
 (defcustom vline-style 'face
   "This variable holds vertical line display style.
 Available values are followings:
-`face'	    : use face.
+`face'      : use face.
 `compose'   : use composit char.
-`mixed'	    : use face and composit char."
+`mixed'      : use face and composit char."
   :type '(radio
-	  (const face)
-	  (const compose)
-	  (const mixed))
+          (const face)
+          (const compose)
+          (const mixed))
   :group 'vline)
 
 
@@ -131,9 +131,9 @@ in the currently selected window."
 If you specified `force' then use force visual line highlighting even
 if `truncate-lines' is non-nil."
   :type '(radio
-	  (const nil)
-	  (const t)
-	  (const force))
+          (const nil)
+          (const t)
+          (const force))
   :group 'vline)
 
 (defcustom vline-use-timer t
@@ -154,10 +154,10 @@ if `truncate-lines' is non-nil."
   :group 'vline
   (if vline-mode
       (progn
-	(add-hook 'pre-command-hook 'vline-pre-command-hook nil t)
-	(if vline-use-timer
-	    (vline-set-timer)
-	  (add-hook 'post-command-hook 'vline-post-command-hook nil t)))
+        (add-hook 'pre-command-hook 'vline-pre-command-hook nil t)
+        (if vline-use-timer
+            (vline-set-timer)
+          (add-hook 'post-command-hook 'vline-post-command-hook nil t)))
     (vline-cancel-timer)
     (vline-clear)
     (remove-hook 'pre-command-hook 'vline-pre-command-hook t)
@@ -181,8 +181,8 @@ if `truncate-lines' is non-nil."
 
 (defun vline-set-timer ()
   (setq vline-timer
-	(run-with-idle-timer
-	 vline-idle-time t 'vline-timer-callback)))
+        (run-with-idle-timer
+         vline-idle-time t 'vline-timer-callback)))
 
 (defun vline-cancel-timer ()
   (when (timerp vline-timer)
@@ -194,8 +194,8 @@ if `truncate-lines' is non-nil."
 
 (defun vline-clear ()
   (mapcar (lambda (ovr)
-	    (and ovr (delete-overlay ovr)))
-	  vline-overlay-table))
+            (and ovr (delete-overlay ovr)))
+          vline-overlay-table))
 
 (defsubst vline-into-fringe-p ()
   (eq (nth 1 (posn-at-point)) 'right-fringe))
@@ -203,54 +203,54 @@ if `truncate-lines' is non-nil."
 (defsubst vline-visual-p ()
   (or (eq vline-visual 'force)
       (and (not truncate-lines)
-	   vline-visual)))
+           vline-visual)))
 
 (defsubst vline-current-column ()
   (if (or (not (vline-visual-p))
-	  ;; margin for full-width char
-	  (< (1+ (current-column)) (window-width)))
+          ;; margin for full-width char
+          (< (1+ (current-column)) (window-width)))
       (current-column)
     ;; hmm.. posn-at-point is not consider tab width.
     (- (current-column)
        (save-excursion
-	 (vertical-motion 0)
-	 (current-column)))))
+         (vertical-motion 0)
+         (current-column)))))
 
 (defsubst vline-move-to-column (col &optional bol-p)
   (if (or (not (vline-visual-p))
-	  ;; margin for full-width char
-	  (< (1+ (current-column)) (window-width)))
+          ;; margin for full-width char
+          (< (1+ (current-column)) (window-width)))
       (move-to-column col)
     (unless bol-p
       (vertical-motion 0))
     (let ((bol-col (current-column)))
       (- (move-to-column (+ bol-col col))
-	 bol-col))))
+         bol-col))))
 
 (defsubst vline-invisible-p (pos)
   (let ((inv (get-char-property pos 'invisible)))
     (and inv
-	 (or (eq buffer-invisibility-spec t)
-	     (memq inv buffer-invisibility-spec)
-	     (assq inv buffer-invisibility-spec)))))
+         (or (eq buffer-invisibility-spec t)
+             (memq inv buffer-invisibility-spec)
+             (assq inv buffer-invisibility-spec)))))
 
 (defsubst vline-forward (n)
   (unless (memq n '(-1 0 1))
     (error "n(%s) must be 0 or 1" n))
   (if (not (vline-visual-p))
       (progn
-	(forward-line n)
-	;; take care of org-mode, outline-mode
-	(when (and (not (bobp))
-		   (vline-invisible-p (1- (point))))
-	  (goto-char (1- (point))))
-	(when (vline-invisible-p (point))
-	  (if (< n 0)
-	      (while (and (not (bobp)) (vline-invisible-p (point)))
-		(goto-char (previous-char-property-change (point))))
-	    (while (and (not (bobp)) (vline-invisible-p (point)))
-	      (goto-char (next-char-property-change (point))))
-	    (forward-line 1))))
+        (forward-line n)
+        ;; take care of org-mode, outline-mode
+        (when (and (not (bobp))
+                   (vline-invisible-p (1- (point))))
+          (goto-char (1- (point))))
+        (when (vline-invisible-p (point))
+          (if (< n 0)
+              (while (and (not (bobp)) (vline-invisible-p (point)))
+                (goto-char (previous-char-property-change (point))))
+            (while (and (not (bobp)) (vline-invisible-p (point)))
+              (goto-char (next-char-property-change (point))))
+            (forward-line 1))))
     (vertical-motion n)))
 
 (defun vline-face (visual-p)
@@ -263,105 +263,105 @@ if `truncate-lines' is non-nil."
   (save-window-excursion
     (save-excursion
       (if point
-	  (goto-char point)
-	(setq point (point)))
+          (goto-char point)
+        (setq point (point)))
       (let* ((column (vline-current-column))
-	     (lcolumn (current-column))
-	     (i 0)
-	     (compose-p (memq vline-style '(compose mixed)))
-	     (face-p (memq vline-style '(face mixed)))
-	     (line-char (if compose-p vline-line-char ? ))
-	     (line-str (make-string 1 line-char))
-	     (visual-line-str line-str)
-	     (in-fringe-p (vline-into-fringe-p)))
-	(when face-p
-	  (setq line-str (propertize line-str 'face (vline-face nil)))
-	  (setq visual-line-str (propertize visual-line-str 'face (vline-face t))))
-	(goto-char (window-end nil t))
-	(vline-forward 0)
-	(while (and (not in-fringe-p)
-		    (< i (window-height))
-		    (< i (length vline-overlay-table))
-		    (not (bobp)))
-	  (let ((cur-column (vline-move-to-column column t)))
-	    ;; non-cursor line only (workaround of eol probrem.
-	    (unless (= (point) point)
-	      ;; if column over the cursor's column (when tab or wide char is appered.
-	      (when (> cur-column column)
-		(let ((lcol (current-column)))
-		  (backward-char)
-		  (setq cur-column (- cur-column (- lcol (current-column))))))
-	      (let* ((ovr (aref vline-overlay-table i))
-		     (visual-p (or (< lcolumn (current-column))
-				   (> lcolumn (+ (current-column)
-						 (- column cur-column)))))
-		     ;; consider a newline, tab and wide char.
-		     (str (concat (make-string (- column cur-column) ? )
-				  (if visual-p visual-line-str line-str)))
-		     (char (char-after)))
-		;; create overlay if not found.
-		(unless ovr
-		  (setq ovr (make-overlay 0 0))
-		  (overlay-put ovr 'rear-nonsticky t)
-		  (aset vline-overlay-table i ovr))
+             (lcolumn (current-column))
+             (i 0)
+             (compose-p (memq vline-style '(compose mixed)))
+             (face-p (memq vline-style '(face mixed)))
+             (line-char (if compose-p vline-line-char ? ))
+             (line-str (make-string 1 line-char))
+             (visual-line-str line-str)
+             (in-fringe-p (vline-into-fringe-p)))
+        (when face-p
+          (setq line-str (propertize line-str 'face (vline-face nil)))
+          (setq visual-line-str (propertize visual-line-str 'face (vline-face t))))
+        (goto-char (window-end nil t))
+        (vline-forward 0)
+        (while (and (not in-fringe-p)
+                    (< i (window-height))
+                    (< i (length vline-overlay-table))
+                    (not (bobp)))
+          (let ((cur-column (vline-move-to-column column t)))
+            ;; non-cursor line only (workaround of eol probrem.
+            (unless (= (point) point)
+              ;; if column over the cursor's column (when tab or wide char is appered.
+              (when (> cur-column column)
+                (let ((lcol (current-column)))
+                  (backward-char)
+                  (setq cur-column (- cur-column (- lcol (current-column))))))
+              (let* ((ovr (aref vline-overlay-table i))
+                     (visual-p (or (< lcolumn (current-column))
+                                   (> lcolumn (+ (current-column)
+                                                 (- column cur-column)))))
+                     ;; consider a newline, tab and wide char.
+                     (str (concat (make-string (- column cur-column) ? )
+                                  (if visual-p visual-line-str line-str)))
+                     (char (char-after)))
+                ;; create overlay if not found.
+                (unless ovr
+                  (setq ovr (make-overlay 0 0))
+                  (overlay-put ovr 'rear-nonsticky t)
+                  (aset vline-overlay-table i ovr))
 
-		;; initialize overlay.
-		(overlay-put ovr 'face nil)
-		(overlay-put ovr 'before-string nil)
-		(overlay-put ovr 'after-string nil)
-		(overlay-put ovr 'invisible nil)
-		(overlay-put ovr 'window
-			     (if vline-current-window-only
-				 (selected-window)
-			       nil))
+                ;; initialize overlay.
+                (overlay-put ovr 'face nil)
+                (overlay-put ovr 'before-string nil)
+                (overlay-put ovr 'after-string nil)
+                (overlay-put ovr 'invisible nil)
+                (overlay-put ovr 'window
+                             (if vline-current-window-only
+                                 (selected-window)
+                               nil))
 
-		(cond
-		 ;; multiwidth space
-		 ((memq char vline-multiwidth-space-list)
-		  (setq str
-			(concat str
-				(make-string (- (save-excursion (forward-char)
-								(current-column))
-						(current-column)
-						(string-width str))
-					     ? )))
-		  (move-overlay ovr (point) (1+ (point)))
-		  (overlay-put ovr 'invisible t)
-		  (overlay-put ovr 'after-string str))
-		 ;; eol
-		 ((eolp)
-		  (move-overlay ovr (point) (point))
-		  (overlay-put ovr 'after-string str)
-		  ;; don't expand eol more than window width
-		  (when (and (not truncate-lines)
-			     (>= (1+ column) (window-width))
-			     (>= column (vline-current-column))
-			     (not (vline-into-fringe-p)))
-		    (delete-overlay ovr)))
-		 (t
-		  (cond
-		   (compose-p
-		    (let (str)
-		      (when char
-			(setq str (compose-chars
-				   char
-				   (cond ((= (char-width char) 1)
-					  '(tc . tc))
-					 ((= cur-column column)
-					  '(tc . tr))
-					 (t
-					  '(tc . tl)))
-				   line-char))
-			(when face-p
-			  (setq str (propertize str 'face (vline-face visual-p))))
-			(move-overlay ovr (point) (1+ (point)))
-			(overlay-put ovr 'invisible t)
-			(overlay-put ovr 'after-string str))))
-		   (face-p
-		    (move-overlay ovr (point) (1+ (point)))
-		    (overlay-put ovr 'face (vline-face visual-p))))))))
-	    (setq i (1+ i))
-	    (vline-forward -1)))))))
+                (cond
+                 ;; multiwidth space
+                 ((memq char vline-multiwidth-space-list)
+                  (setq str
+                        (concat str
+                                (make-string (- (save-excursion (forward-char)
+                                                                (current-column))
+                                                (current-column)
+                                                (string-width str))
+                                             ? )))
+                  (move-overlay ovr (point) (1+ (point)))
+                  (overlay-put ovr 'invisible t)
+                  (overlay-put ovr 'after-string str))
+                 ;; eol
+                 ((eolp)
+                  (move-overlay ovr (point) (point))
+                  (overlay-put ovr 'after-string str)
+                  ;; don't expand eol more than window width
+                  (when (and (not truncate-lines)
+                             (>= (1+ column) (window-width))
+                             (>= column (vline-current-column))
+                             (not (vline-into-fringe-p)))
+                    (delete-overlay ovr)))
+                 (t
+                  (cond
+                   (compose-p
+                    (let (str)
+                      (when char
+                        (setq str (compose-chars
+                                   char
+                                   (cond ((= (char-width char) 1)
+                                          '(tc . tc))
+                                         ((= cur-column column)
+                                          '(tc . tr))
+                                         (t
+                                          '(tc . tl)))
+                                   line-char))
+                        (when face-p
+                          (setq str (propertize str 'face (vline-face visual-p))))
+                        (move-overlay ovr (point) (1+ (point)))
+                        (overlay-put ovr 'invisible t)
+                        (overlay-put ovr 'after-string str))))
+                   (face-p
+                    (move-overlay ovr (point) (1+ (point)))
+                    (overlay-put ovr 'face (vline-face visual-p))))))))
+            (setq i (1+ i))
+            (vline-forward -1)))))))
 
 (provide 'vline)
 ;;; vline.el ends here
