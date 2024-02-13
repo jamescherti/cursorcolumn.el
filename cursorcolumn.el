@@ -250,10 +250,10 @@ as text scaling."
           (setq visual-line-str (propertize visual-line-str 'face (cursorcolumn-face t))))
         (goto-char (window-end nil t))
         (cursorcolumn-forward 0)
+        (catch 'break
         (while (and (not in-fringe-p)
                     (< i window-height)
-                    (< i (length cursorcolumn-overlay-table))
-                    (not (bobp)))
+                    (< i (length cursorcolumn-overlay-table)))
           (let ((cur-column (cursorcolumn-move-to-column column t)))
             ;; non-cursor line only (workaround of eol probrem.
             (unless (= (point) point)
@@ -332,7 +332,9 @@ as text scaling."
                     (move-overlay ovr (point) (1+ (point)))
                     (overlay-put ovr 'face (cursorcolumn-face visual-p))))))))
             (setq i (1+ i))
-            (cursorcolumn-forward -1)))))))
+            (when (bobp)
+              (throw 'break nil))
+            (cursorcolumn-forward -1))))))))
 
 (provide 'cursorcolumn)
 ;;; cursorcolumn.el ends here
