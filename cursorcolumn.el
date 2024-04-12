@@ -100,6 +100,11 @@ if `truncate-lines' is non-nil."
   :type 'number
   :group 'cursorcolumn)
 
+(defcustom cursorcolumn-overlay-priority -50
+  "Priority used on the overlay used by cursorcolumn."
+  :type 'integer
+  :group 'cursorcolumn)
+
 ;;;###autoload
 (define-minor-mode cursorcolumn-mode
   "Display vertical line mode."
@@ -233,6 +238,7 @@ as text scaling."
   ;; Create an overlay if not found
   (unless ovr
     (setq ovr (make-overlay 0 0))
+    (overlay-put ovr 'priority cursorcolumn-overlay-priority)
     (overlay-put ovr 'rear-nonsticky t)
     (aset cursorcolumn-overlay-table i ovr))
 
