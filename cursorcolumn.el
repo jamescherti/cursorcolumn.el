@@ -230,7 +230,6 @@ as text scaling."
 
 (defun cursorcolumn-show (&optional point)
   (cursorcolumn-clear)
-  (save-window-excursion
     (save-excursion
       (if point
           (goto-char point)
@@ -334,7 +333,7 @@ as text scaling."
               (setq i (1+ i))
               (when (bobp)
                 (throw 'break nil))
-              (cursorcolumn-forward -1))))))))
+              (cursorcolumn-forward -1)))))))
 
 (provide 'cursorcolumn)
 ;;; cursorcolumn.el ends here
