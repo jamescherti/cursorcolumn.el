@@ -227,38 +227,55 @@ as text scaling."
     (+ 1 (- end-line beginning-line))))
 
 (defun cursorcolumn-show (&optional point)
+  ;; Clear existing column highlighting
   (cursorcolumn-clear)
+
+  ;; Preserve cursor position and execute the body
   (save-excursion
+    ;; If a specific point is provided, move to it; otherwise, use the current point
     (if point
         (goto-char point)
       (setq point (point)))
-    (let* ((column (cursorcolumn-current-column))
-           (lcolumn (current-column))
-           (i 0)
-           (compose-p (memq cursorcolumn-style '(compose mixed)))
-           (face-p (memq cursorcolumn-style '(face mixed)))
-           (line-char (if compose-p cursorcolumn-line-char ?\ ))
-           (line-str (make-string 1 line-char))
-           (visual-line-str line-str)
-           (window-height (cursorcolumn--calculate-window-visible-lines))
-           (in-fringe-p (cursorcolumn-into-fringe-p)))
+
+    ;; Initialize variables for the operation
+    (let* ((column (cursorcolumn-current-column))  ;; Calculate the current column of the cursor
+           (lcolumn (current-column))              ;; Store the current column position
+           (i 0)                                   ;; Initialize counter for overlay array
+           (compose-p (memq cursorcolumn-style '(compose mixed)))  ;; Check if composition should be used
+           (face-p (memq cursorcolumn-style '(face mixed)))        ;; Check if faces should be used
+           (line-char (if compose-p cursorcolumn-line-char ?\ ))   ;; Decide on the character for the line
+           (line-str (make-string 1 line-char))                    ;; Create a string with the line character
+           (visual-line-str line-str)                              ;; Duplicate line string for visual lines
+           (window-height (cursorcolumn--calculate-window-visible-lines))  ;; Calculate visible lines in window
+           (in-fringe-p (cursorcolumn-into-fringe-p)))             ;; Check if the cursor is in the fringe area
+
+      ;; If using faces, apply the designated face to the line string
       (when face-p
         (setq line-str (propertize line-str 'face (cursorcolumn-face nil)))
         (setq visual-line-str (propertize visual-line-str 'face (cursorcolumn-face t))))
+
+      ;; Move to the end of the window
       (goto-char (window-end nil t))
+      ;; Adjust position for showing the column line
       (cursorcolumn-forward 0)
+
+      ;; Loop until all visible lines are processed or overlay table capacity is reached
       (catch 'break
         (while (and (not in-fringe-p)
                     (< i window-height)
                     (< i (length cursorcolumn-overlay-table)))
           (let ((cur-column (cursorcolumn-move-to-column column t)))
+            ;; Only proceed if not on the original cursor line to prevent cluttering
             ;; non-cursor line only (workaround of eol probrem.
             (unless (= (point) point)
+              ;; Adjust for characters that extend beyond the intended column
               ;; if column over the cursor's column (when tab or wide char is appered.
               (when (> cur-column column)
                 (let ((lcol (current-column)))
                   (backward-char)
                   (setq cur-column (- cur-column (- lcol (current-column))))))
+
+              ;; Setup overlay and strings for visual representation
               (let* ((ovr (aref cursorcolumn-overlay-table i))
                      (visual-p (or (< lcolumn (current-column))
                                    (> lcolumn (+ (current-column)
@@ -267,13 +284,13 @@ as text scaling."
                      (str (concat (make-string (- column cur-column) ?\ )
                                   (if visual-p visual-line-str line-str)))
                      (char (char-after)))
-                ;; create overlay if not found.
+                ;; Create an overlay if not found
                 (unless ovr
                   (setq ovr (make-overlay 0 0))
                   (overlay-put ovr 'rear-nonsticky t)
                   (aset cursorcolumn-overlay-table i ovr))
 
-                ;; initialize overlay.
+                ;; Initialize or update the overlay properties
                 (overlay-put ovr 'face nil)
                 (overlay-put ovr 'before-string nil)
                 (overlay-put ovr 'after-string nil)
@@ -283,8 +300,9 @@ as text scaling."
                                  (selected-window)
                                nil))
 
-                ;; multiwidth space
-                (cond ((memq char cursorcolumn-multiwidth-space-list)
+                ;; Handle special cases for character display at overlay position
+                ;; (multiwidth space)
+                (cond ((memq char cursorcolumn-multiwidth-space-list)  ;; Handle fullwidth spaces
                        (setq str
                              (concat str
                                      (make-string (- (save-excursion (forward-char)
@@ -296,7 +314,7 @@ as text scaling."
                        (overlay-put ovr 'invisible t)
                        (overlay-put ovr 'after-string str))
 
-                      ;; eol
+                      ;; Handle end of line
                       ((eolp)
                        (move-overlay ovr (point) (point))
                        (overlay-put ovr 'after-string str)
@@ -307,6 +325,7 @@ as text scaling."
                                   (not (cursorcolumn-into-fringe-p)))
                          (delete-overlay ovr)))
 
+                      ;; Compose characters when applicable
                       (t (cond (compose-p (let (str)
                                             (when char
                                               (setq str (compose-chars
