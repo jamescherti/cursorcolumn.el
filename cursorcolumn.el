@@ -322,7 +322,7 @@ as text scaling."
 
 (defun cursorcolumn-show (&optional point)
   ;; Clear existing column highlighting
-  (cursorcolumn-clear)
+  ;; (cursorcolumn-clear)
 
   ;; Preserve cursor position and execute the body
   (save-excursion
