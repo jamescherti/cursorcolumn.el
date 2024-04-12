@@ -274,25 +274,29 @@ as text scaling."
       (delete-overlay ovr)))
 
    ;; Compose characters when applicable
-   (t (cond (compose-p (let (str)
-                         (when char
-                           (setq str (compose-chars
-                                      char
-                                      (cond ((= (char-width char) 1)
-                                             '(tc . tc))
+   (t (cond
+       ;; Check if composition should be used
+       (compose-p (let (str)
+                    (when char
+                      (setq str (compose-chars
+                                 char
+                                 (cond ((= (char-width char) 1)
+                                        '(tc . tc))
 
-                                            ((= cur-column column)
-                                             '(tc . tr))
+                                       ((= cur-column column)
+                                        '(tc . tr))
 
-                                            (t '(tc . tl)))
-                                      line-char))
-                           (when face-p
-                             (setq str (propertize str 'face (cursorcolumn-face visual-p))))
-                           (move-overlay ovr (point) (1+ (point)))
-                           (overlay-put ovr 'invisible t)
-                           (overlay-put ovr 'after-string str))))
-            (face-p (move-overlay ovr (point) (1+ (point)))
-                    (overlay-put ovr 'face (cursorcolumn-face visual-p)))))))
+                                       (t '(tc . tl)))
+                                 line-char))
+                      (when face-p
+                        (setq str (propertize str 'face (cursorcolumn-face visual-p))))
+                      (move-overlay ovr (point) (1+ (point)))
+                      (overlay-put ovr 'invisible t)
+                      (overlay-put ovr 'after-string str))))
+
+       ;; Check if faces should be used
+       (face-p (move-overlay ovr (point) (1+ (point)))
+               (overlay-put ovr 'face (cursorcolumn-face visual-p)))))))
 
 (defun cursorcolumn--update-overlay (cur-column column lcolumn i compose-p
                                                 face-p line-char line-str
