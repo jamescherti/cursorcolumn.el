@@ -117,7 +117,7 @@ if `truncate-lines' is non-nil."
   :group 'cursorcolumn
   (if cursorcolumn-mode
       (progn
-        (add-hook 'pre-command-hook 'cursorcolumn-pre-command-hook nil t)
+        ;; (add-hook 'pre-command-hook 'cursorcolumn-pre-command-hook nil t)
         (if cursorcolumn-use-timer
             (cursorcolumn-set-timer)
           (progn
@@ -126,7 +126,7 @@ if `truncate-lines' is non-nil."
     (cursorcolumn-cancel-timer)
     (cursorcolumn-clear)
     (remove-hook 'after-change-functions 'cursorcolumn-after-change-functions)
-    (remove-hook 'pre-command-hook 'cursorcolumn-pre-command-hook t)
+    ;; (remove-hook 'pre-command-hook 'cursorcolumn-pre-command-hook t)
     (remove-hook 'post-command-hook 'cursorcolumn-post-command-hook t)))
 
 ;;;###autoload
@@ -138,15 +138,18 @@ if `truncate-lines' is non-nil."
   :group 'cursorcolumn)
 
 (defun cursorcolumn-pre-command-hook ()
-  (when (and cursorcolumn-mode (not (minibufferp)))
-    (cursorcolumn-clear)))
+    (when (and cursorcolumn-mode (not (minibufferp)))
+      (cursorcolumn-clear)))
 
 (defun cursorcolumn-post-command-hook ()
-  (when (and cursorcolumn-mode (not (minibufferp)))
-    (cursorcolumn-show)))
-
-(defun cursorcolumn-after-change-functions (beg end len)
-  (cursorcolumn-post-command-hook))
+  (let ((point (point)))
+    (when (or (not (boundp 'cursorcolumn-previous-cursor-position))
+              (and (boundp 'cursorcolumn-previous-cursor-position)
+                   (not (= cursorcolumn-previous-cursor-position point))))
+      (setq-local cursorcolumn-previous-cursor-position point)
+      (when (and cursorcolumn-mode (not (minibufferp)))
+        (cursorcolumn-clear)
+        (cursorcolumn-show cursorcolumn-previous-cursor-position)))))
 
 (defun cursorcolumn-set-timer ()
   (setq cursorcolumn-timer
