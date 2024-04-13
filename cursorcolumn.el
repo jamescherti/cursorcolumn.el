@@ -121,11 +121,12 @@ if `truncate-lines' is non-nil."
         (if cursorcolumn-use-timer
             (cursorcolumn-set-timer)
           (progn
-            (add-hook 'after-change-functions 'cursorcolumn-after-change-functions nil t)
+            (add-hook 'after-change-functions 'cursorcolumn-post-command-hook nil t)
+            ;; (add-hook 'pre-command-hook 'cursorcolumn-post-command-hook nil t)
             (add-hook 'post-command-hook 'cursorcolumn-post-command-hook nil t))))
     (cursorcolumn-cancel-timer)
     (cursorcolumn-clear)
-    (remove-hook 'after-change-functions 'cursorcolumn-after-change-functions)
+    (remove-hook 'after-change-functions 'cursorcolumn-post-command-hook)
     ;; (remove-hook 'pre-command-hook 'cursorcolumn-pre-command-hook t)
     (remove-hook 'post-command-hook 'cursorcolumn-post-command-hook t)))
 
@@ -137,19 +138,21 @@ if `truncate-lines' is non-nil."
       (cursorcolumn-mode 1)))
   :group 'cursorcolumn)
 
-(defun cursorcolumn-pre-command-hook ()
-    (when (and cursorcolumn-mode (not (minibufferp)))
-      (cursorcolumn-clear)))
+(defun cursorcolumn-pre-command-hook (&rest _)
+  (when (and cursorcolumn-mode (not (minibufferp)))
+    (cursorcolumn-clear)))
 
-(defun cursorcolumn-post-command-hook ()
-  (let ((point (point)))
-    (when (or (not (boundp 'cursorcolumn-previous-cursor-position))
-              (and (boundp 'cursorcolumn-previous-cursor-position)
-                   (not (= cursorcolumn-previous-cursor-position point))))
-      (setq-local cursorcolumn-previous-cursor-position point)
-      (when (and cursorcolumn-mode (not (minibufferp)))
+(defun cursorcolumn-post-command-hook (&optional force)
+  (when (bound-and-true-p cursorcolumn-mode)
+    (let ((point (point)))
+      (when (or force
+                (not (boundp 'cursorcolumn-previous-cursor-position))
+                (and (boundp 'cursorcolumn-previous-cursor-position)
+                     (not (= cursorcolumn-previous-cursor-position point))))
+        (setq-local cursorcolumn-previous-cursor-position point)
         (cursorcolumn-clear)
-        (cursorcolumn-show cursorcolumn-previous-cursor-position)))))
+        (when (and cursorcolumn-mode (not (minibufferp)))
+          (cursorcolumn-show cursorcolumn-previous-cursor-position))))))
 
 (defun cursorcolumn-set-timer ()
   (setq cursorcolumn-timer
