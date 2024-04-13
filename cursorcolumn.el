@@ -189,7 +189,8 @@ if `truncate-lines' is non-nil."
     ;; When in visual mode and at the edge, adjust the column calculation.
     (- (current-column)
        (save-excursion
-         (vertical-motion 0)
+         ;; (vertical-motion 0)
+         (beginning-of-line)
          (current-column)))))
 
 (defsubst cursorcolumn-move-to-column (target-col &optional at-line-beginning)
@@ -204,7 +205,8 @@ If AT-LINE-BEGINNING is non-nil, the movement is adjusted from the beginning of 
     (unless at-line-beginning
       ;; If not adjusting from the line's beginning, move vertically to align
       ;; with the current line start
-      (vertical-motion 0))
+      ;; (vertical-motion 0)
+      (beginning-of-line))
     (let ((bol-col (current-column)))
       ;; Calculate the effective column after movement and adjust for any
       ;; discrepancies
