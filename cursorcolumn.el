@@ -163,7 +163,9 @@ if `truncate-lines' is non-nil."
           cursorcolumn-overlay-table))
 
 (defsubst cursorcolumn-into-fringe-p ()
-  (eq (nth 1 (posn-at-point)) 'right-fringe))
+  ;; (eq (nth 1 (posn-at-point)) 'right-fringe)  ;; Disabled. Slow.
+  nil
+  )
 
 (defsubst cursorcolumn-visual-p ()
   (or (eq cursorcolumn-visual 'force)
@@ -181,15 +183,24 @@ if `truncate-lines' is non-nil."
          (vertical-motion 0)
          (current-column)))))
 
-(defsubst cursorcolumn-move-to-column (col &optional bol-p)
+(defsubst cursorcolumn-move-to-column (target-col &optional at-line-beginning)
+  "Move the cursor to the specified column TARGET-COL.
+If AT-LINE-BEGINNING is non-nil, the movement is adjusted from the beginning of the line."
+  ;; Checks if visual-line-mode is not active
   (if (or (not (cursorcolumn-visual-p))
           ;; margin for full-width char
           (< (1+ (current-column)) (window-width)))
-      (move-to-column col)
-    (unless bol-p
+      ;; Move directly if conditions are met
+      (move-to-column target-col)
+    (unless at-line-beginning
+      ;; If not adjusting from the line's beginning, move vertically to align
+      ;; with the current line start
       (vertical-motion 0))
     (let ((bol-col (current-column)))
-      (- (move-to-column (+ bol-col col))
+      ;; Calculate the effective column after movement and adjust for any
+      ;; discrepancies
+      (- (move-to-column (+ bol-col target-col))
+         ;; Return the adjustment difference
          bol-col))))
 
 (defsubst cursorcolumn-invisible-p (pos)
@@ -309,7 +320,7 @@ as text scaling."
                                                 visual-line-str
                                                 point)
   ;; Adjust for characters that extend beyond the intended column
-  ;; if column over the cursor's column (when tab or wide char is appered.
+  ;; if column over the cursor's column (when tab or wide char appears).
   (when (> cur-column column)
     (let ((lcol (current-column)))
       (backward-char)
@@ -337,9 +348,12 @@ as text scaling."
   ;; Preserve cursor position and execute the body
   (save-excursion
     ;; If a specific point is provided, move to it; otherwise, use the current point
-    (if point
-        (goto-char point)
-      (setq point (point)))
+    ;; This go to char is slow, according to the CPU and memory profiler:
+    ;; 44% goto-char -> window-end -> jit-lock-function -> jit-lock-fontify-now -> jit-lock--run-functions
+    (let ((current-point (point)))
+      (if (and point (not (eq point current-point)))
+          (goto-char point)
+        (setq point current-point)))
 
     ;; Initialize variables for the operation
     (let* ((column (cursorcolumn-current-column))  ;; Calculate the current column of the cursor
