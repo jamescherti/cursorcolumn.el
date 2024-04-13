@@ -8,7 +8,7 @@
 ;; Original Author: Taiki SUGAWARA <buzz.taiki@gmail.com>
 ;;
 ;; Copyright (C) 2024 by James Cherti | https://www.jamescherti.com/
-;; Copyright (C) 2002, 2008-2021 by Taiki SUGAWARA <buzz.taiki@gmail.com>
+;; Copyright (C) 2002-2021 by Taiki SUGAWARA <buzz.taiki@gmail.com>
 ;;
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -40,6 +40,7 @@
 
 ;; Example cursorcolumn-multiwidth-space-list of Japanese fullwidth space:
 ;;   (list ?\t (decode-char 'ucs #x3000)))
+;; (defvar cursorcolumn-multiwidth-space-list (list ?\t (decode-char 'ucs #x3000)))
 (defvar cursorcolumn-multiwidth-space-list '())
 
 (defvar cursorcolumn-timer nil)
@@ -161,6 +162,7 @@ if `truncate-lines' is non-nil."
     (cursorcolumn-show)))
 
 (defun cursorcolumn-clear ()
+  ;; FIXME: Slow
   (mapcar (lambda (ovr)
             (and ovr (delete-overlay ovr)))
           cursorcolumn-overlay-table))
@@ -231,20 +233,24 @@ If AT-LINE-BEGINNING is non-nil, the movement is adjusted from the beginning of 
 
         ;; Handling for invisible text.
         ;; (org-mode, outline-mode...)
-        (when (and (not (bobp))
-                   (cursorcolumn-invisible-p (1- (point))))
-          (goto-char (1- (point))))
+        ;; FIXME Optimize this part
+        ;; (when (and (not (bobp))
+        ;;            (cursorcolumn-invisible-p (1- (point))))
+        ;;   ;; (goto-char (1- (point)))  ;; FIXME Replaced with backward-char.
+        ;;   (backward-char))
 
-        (when (cursorcolumn-invisible-p (point))
-          (if (< n 0)
-              (while (and (not (bobp))
-                          (cursorcolumn-invisible-p (point)))
-                (goto-char (previous-char-property-change (point))))
-            (progn
-              (while (and (not (bobp))
-                          (cursorcolumn-invisible-p (point)))
-                (goto-char (next-char-property-change (point))))
-              (forward-line 1)))))
+        ;; (when (cursorcolumn-invisible-p (point))
+        ;;   (if (< n 0)
+        ;;       (while (and (not (bobp))
+        ;;                   (cursorcolumn-invisible-p (point)))
+        ;;         (goto-char (previous-char-property-change (point))))
+        ;;     (progn
+        ;;       (while (and (not (bobp))
+        ;;                   (cursorcolumn-invisible-p (point)))
+        ;;         (goto-char (next-char-property-change (point))))
+        ;;       (forward-line 1))))
+
+        )
     ;; Default action if cursorcolumn-visual-p returns true.
     (vertical-motion n)))
 
@@ -261,76 +267,80 @@ as text scaling."
         (end-line (line-number-at-pos (window-end))))
     (+ 1 (- end-line beginning-line))))
 
+;; FIXME: slow
 (defun cursorcolumn--set-overlay-properties (cur-column column i
                                                         compose-p face-p line-char
-                                                        point ovr visual-p str char)
+                                                        point visual-p line-str visual-line-str)
   (interactive)
-  ;; Create an overlay if not found
-  (unless ovr
-    (setq ovr (make-overlay 0 0))
-    (overlay-put ovr 'priority cursorcolumn-overlay-priority)
-    (overlay-put ovr 'rear-nonsticky t)
-    (aset cursorcolumn-overlay-table i ovr))
+  (let ((ovr (aref cursorcolumn-overlay-table i))
+        (str (concat (make-string (- column cur-column) ?\ )
+                     (if visual-p visual-line-str line-str)))
+        (char (char-after)))
+    ;; Create an overlay if not found
+    (unless ovr
+      (setq ovr (make-overlay 0 0))
+      (overlay-put ovr 'priority cursorcolumn-overlay-priority)
+      (overlay-put ovr 'rear-nonsticky t)
+      (aset cursorcolumn-overlay-table i ovr))
 
-  ;; Initialize or update the overlay properties
-  (overlay-put ovr 'face nil)
-  (overlay-put ovr 'before-string nil)
-  (overlay-put ovr 'after-string nil)
-  (overlay-put ovr 'invisible nil)
-  (overlay-put ovr 'window (and cursorcolumn-current-window-only
-                                (selected-window)))
+    ;; Initialize or update the overlay properties
+    (overlay-put ovr 'face nil)
+    (overlay-put ovr 'before-string nil)
+    (overlay-put ovr 'after-string nil)
+    (overlay-put ovr 'invisible nil)
+    (overlay-put ovr 'window (and cursorcolumn-current-window-only
+                                  (selected-window)))
 
-  ;; Handle special cases for character display at overlay position
-  ;; (multiwidth space)
-  (cond
-   ;; Handle end of line
-   ((eolp)
-    (move-overlay ovr (point) (point))
-    (overlay-put ovr 'after-string str)
-    ;; Don't expand eol more than window width
-    (when (and (not truncate-lines)
-               (>= (1+ column) (window-width))
-               (>= column (cursorcolumn-current-column))
-               (not (cursorcolumn-into-fringe-p)))
-      (delete-overlay ovr)))
+    ;; Handle special cases for character display at overlay position
+    ;; (multiwidth space)
+    (cond
+     ;; Handle end of line
+     ((eolp)
+      (move-overlay ovr (point) (point))
+      (overlay-put ovr 'after-string str)
+      ;; Don't expand eol more than window width
+      (when (and (not truncate-lines)
+                 (>= (1+ column) (window-width))
+                 (>= column (cursorcolumn-current-column))
+                 (not (cursorcolumn-into-fringe-p)))
+        (delete-overlay ovr)))
 
-   ;; Handle fullwidth spaces
-   ((and (not (null cursorcolumn-multiwidth-space-list))
-         (memq char cursorcolumn-multiwidth-space-list))
-    (setq str
-          (concat str
-                  (make-string (- (save-excursion (forward-char)
-                                                  (current-column))
-                                  (current-column)
-                                  (string-width str))
-                               ?\ )))
-    (move-overlay ovr (point) (1+ (point)))
-    (overlay-put ovr 'invisible t)
-    (overlay-put ovr 'after-string str))
+     ;; Handle fullwidth spaces
+     ((and (not (null cursorcolumn-multiwidth-space-list))
+           (memq char cursorcolumn-multiwidth-space-list))
+      (setq str (concat str (make-string (- (save-excursion (forward-char)
+                                                            (current-column))
+                                            (current-column)
+                                            (string-width str))
+                                         ?\ )))
+      (move-overlay ovr (point) (1+ (point)))
+      (overlay-put ovr 'invisible t)
+      (overlay-put ovr 'after-string str))
 
-   ;; Check if composition should be used
-   (compose-p (let (str)
-                (when char
-                  (setq str (compose-chars
-                             char
-                             (cond ((= (char-width char) 1)
-                                    '(tc . tc))
+     ;; Check if composition should be used
+     (compose-p (let (str)
+                  (when char
+                    (setq str (compose-chars
+                               char
+                               (cond ((= (char-width char) 1)
+                                      '(tc . tc))
 
-                                   ((= cur-column column)
-                                    '(tc . tr))
+                                     ((= cur-column column)
+                                      '(tc . tr))
 
-                                   (t '(tc . tl)))
-                             line-char))
-                  (when face-p
-                    (setq str (propertize str 'face (cursorcolumn-face visual-p))))
-                  (move-overlay ovr (point) (1+ (point)))
-                  (overlay-put ovr 'invisible t)
-                  (overlay-put ovr 'after-string str))))
+                                     (t '(tc . tl)))
+                               line-char))
+                    (when face-p
+                      (setq str (propertize str 'face (cursorcolumn-face visual-p))))
+                    (move-overlay ovr (point) (1+ (point)))
+                    (overlay-put ovr 'invisible t)
+                    (overlay-put ovr 'after-string str))))
 
-   ;; Check if faces should be used
-   (face-p (move-overlay ovr (point) (1+ (point)))
-           (overlay-put ovr 'face (cursorcolumn-face visual-p)))))
+     ;; Check if faces should be used
+     (face-p (move-overlay ovr (point) (1+ (point)))
+             (overlay-put ovr 'face (cursorcolumn-face visual-p))))))
 
+;; FIXME: Very slow
 (defun cursorcolumn--update-overlay (cur-column column lcolumn i compose-p
                                                 face-p line-char line-str
                                                 visual-line-str
@@ -343,27 +353,26 @@ as text scaling."
   ;;     (setq cur-column (- cur-column (- lcol (current-column))))))
   (when (> cur-column column)
     (move-to-column column)
-    ;;  Not necessary because (move-to-column) can replace it
+    (setq cur-column column)
+    ;; FIXME The following was replaced because (move-to-column) can replace it
     ;; (let ((lcol (current-column)))
     ;;   (backward-char)
     ;;   (setq cur-column (- cur-column (- lcol (current-column)))))
     )
 
   ;; Setup overlay and strings for visual representation
-  (let* ((ovr (aref cursorcolumn-overlay-table i))
-         (current-col (current-column))
+  ;; FIXME: let slow
+  (let* ((current-col (current-column))
          (visual-p (or (< lcolumn current-col)
                        (> lcolumn (+ current-col
                                      (- column cur-column)))))
          ;; Create string considering newline, tab, and wide characters.
-         (str (concat (make-string (- column cur-column) ?\ )
-                      (if visual-p visual-line-str line-str)))
-         (char (char-after)))
+         )
 
-    (cursorcolumn--set-overlay-properties
-     cur-column column i
-     compose-p face-p line-char
-     point ovr visual-p str char)))
+    (cursorcolumn--set-overlay-properties cur-column column i
+                                          compose-p face-p line-char
+                                          point visual-p line-str
+                                          visual-line-str)))
 
 (defun cursorcolumn-show (&optional point)
   ;; Clear existing column highlighting
@@ -389,6 +398,7 @@ as text scaling."
            (line-str (make-string 1 line-char))                    ;; Create a string with the line character
            (visual-line-str line-str)                              ;; Duplicate line string for visual lines
            (window-height (cursorcolumn--calculate-window-visible-lines))  ;; Calculate visible lines in window
+           (length-overlay-table (length cursorcolumn-overlay-table))
            (in-fringe-p (cursorcolumn-into-fringe-p)))             ;; Check if the cursor is in the fringe area
 
       ;; If using faces, apply the designated face to the line string
@@ -406,7 +416,7 @@ as text scaling."
       (catch 'break
         (while (and (not in-fringe-p)
                     (< i window-height)
-                    (< i (length cursorcolumn-overlay-table)))
+                    (< i length-overlay-table))
           (let ((cur-column (cursorcolumn-move-to-column column t)))
             (unless (= (point) point)
               ;; Only proceed if not on the original cursor line to prevent cluttering
