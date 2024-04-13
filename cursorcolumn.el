@@ -134,12 +134,12 @@ if `truncate-lines' is non-nil."
 (define-global-minor-mode cursorcolumn-global-mode
   cursorcolumn-mode
   (lambda ()
-    (unless (minibufferp)
+    (unless (window-minibuffer-p)
       (cursorcolumn-mode 1)))
   :group 'cursorcolumn)
 
 (defun cursorcolumn-pre-command-hook (&rest _)
-  (when (and cursorcolumn-mode (not (minibufferp)))
+  (when (and cursorcolumn-mode (not (window-minibuffer-p)))
     (cursorcolumn-clear)))
 
 (defun cursorcolumn-post-command-hook (&optional force)
@@ -151,7 +151,7 @@ if `truncate-lines' is non-nil."
                      (not (= cursorcolumn-previous-cursor-position point))))
         (setq-local cursorcolumn-previous-cursor-position point)
         (cursorcolumn-clear)
-        (when (and cursorcolumn-mode (not (minibufferp)))
+        (when (and cursorcolumn-mode (not (window-minibuffer-p)))
           (cursorcolumn-show cursorcolumn-previous-cursor-position))))))
 
 (defun cursorcolumn-set-timer ()
@@ -164,7 +164,7 @@ if `truncate-lines' is non-nil."
     (cancel-timer cursorcolumn-timer)))
 
 (defun cursorcolumn-timer-callback ()
-  (when (and cursorcolumn-mode (not (minibufferp)))
+  (when (and cursorcolumn-mode (not (window-minibuffer-p)))
     (cursorcolumn-show)))
 
 (defun cursorcolumn-clear ()
