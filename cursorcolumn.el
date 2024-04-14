@@ -242,10 +242,10 @@ If AT-LINE-BEGINNING is non-nil, the movement is adjusted from the beginning of 
     ;; Handling for invisible text.
     ;; (org-mode, outline-mode...)
     ;; FIXME Optimize this part
-    ;; (when (and (not (bobp))
-    ;;            (cursorcolumn-invisible-p (1- (point))))
-    ;;   ;; (goto-char (1- (point)))  ;; FIXME Replaced with backward-char.
-    ;;   (backward-char))
+    (when (and (not (bobp))
+               (cursorcolumn-invisible-p (1- (point))))
+      ;; (goto-char (1- (point)))  ;; FIXME Replaced with backward-char.
+      (backward-char))
 
     (when (cursorcolumn-invisible-p (point))
       (if (< n 0)
@@ -276,13 +276,14 @@ as text scaling."
                                                         compose-p face-p line-char
                                                         point visual-p line-str visual-line-str)
   (interactive)
-  (let ((ovr (aref cursorcolumn-overlay-table i))
+  (let ((point (point))
+        (ovr (aref cursorcolumn-overlay-table i))
         (str (concat (make-string (- column cur-column) ?\ )
                      (if visual-p visual-line-str line-str)))
         (char (char-after)))
     ;; Create an overlay if not found
     (unless ovr
-      (setq ovr (make-overlay 0 0))
+      (setq ovr (make-overlay point point))
       (overlay-put ovr 'priority cursorcolumn-overlay-priority)
       (overlay-put ovr 'rear-nonsticky t)
       (aset cursorcolumn-overlay-table i ovr))
@@ -299,8 +300,9 @@ as text scaling."
     ;; (multiwidth space)
     (cond
      ;; Handle end of line
+     ;; FIXME: eolp buggy when text is folded
      ((eolp)
-      (move-overlay ovr (point) (point))
+      (move-overlay ovr point point)
       (overlay-put ovr 'after-string str)
       ;; (when (and (not truncate-lines)
       ;;            (>= (1+ column) (window-width))
@@ -317,7 +319,7 @@ as text scaling."
                                             (current-column)
                                             (string-width str))
                                          ?\ )))
-      (move-overlay ovr (point) (1+ (point)))
+      (move-overlay ovr point (1+ point))
       (overlay-put ovr 'invisible t)
       (overlay-put ovr 'after-string str))
 
@@ -336,14 +338,13 @@ as text scaling."
                                line-char))
                     (when face-p
                       (setq str (propertize str 'face (cursorcolumn-face visual-p))))
-                    (move-overlay ovr (point) (1+ (point)))
+                    (move-overlay ovr point (1+ point))
                     (overlay-put ovr 'invisible t)
                     (overlay-put ovr 'after-string str))))
 
      ;; Check if faces should be used
-     (face-p (move-overlay ovr (point) (1+ (point)))
-             (overlay-put ovr 'face (cursorcolumn-face visual-p)))
-     )))
+     (face-p (move-overlay ovr point (1+ point))
+             (overlay-put ovr 'face (cursorcolumn-face visual-p))))))
 
 ;; FIXME: Very slow
 (defun cursorcolumn--update-overlay (cur-column column lcolumn i compose-p
