@@ -142,7 +142,7 @@ if `truncate-lines' is non-nil."
   (when (and cursorcolumn-mode (not (window-minibuffer-p)))
     (cursorcolumn-clear)))
 
-(defun cursorcolumn-post-command-hook ()
+(defun cursorcolumn-post-command-hook (&rest _)
   (when (bound-and-true-p cursorcolumn-mode)
     (let ((point (point)))
       (when (or (not (boundp 'cursorcolumn-previous-cursor-position))
@@ -233,33 +233,30 @@ If AT-LINE-BEGINNING is non-nil, the movement is adjusted from the beginning of 
     (error "n(%s) must be 0 or 1" n))
 
   ;; Choose behavior based on visual state.
-  (if (not (cursorcolumn-visual-p))
-      (progn
-        ;; Move cursor in specified direction.
-        (forward-line n)
+  (if (cursorcolumn-visual-p)
+      ;; Default action if cursorcolumn-visual-p returns true.
+      (vertical-motion n)
+    ;; Move cursor in specified direction.
+    (forward-line n)
 
-        ;; Handling for invisible text.
-        ;; (org-mode, outline-mode...)
-        ;; FIXME Optimize this part
-        ;; (when (and (not (bobp))
-        ;;            (cursorcolumn-invisible-p (1- (point))))
-        ;;   ;; (goto-char (1- (point)))  ;; FIXME Replaced with backward-char.
-        ;;   (backward-char))
+    ;; Handling for invisible text.
+    ;; (org-mode, outline-mode...)
+    ;; FIXME Optimize this part
+    ;; (when (and (not (bobp))
+    ;;            (cursorcolumn-invisible-p (1- (point))))
+    ;;   ;; (goto-char (1- (point)))  ;; FIXME Replaced with backward-char.
+    ;;   (backward-char))
 
-        ;; (when (cursorcolumn-invisible-p (point))
-        ;;   (if (< n 0)
-        ;;       (while (and (not (bobp))
-        ;;                   (cursorcolumn-invisible-p (point)))
-        ;;         (goto-char (previous-char-property-change (point))))
-        ;;     (progn
-        ;;       (while (and (not (bobp))
-        ;;                   (cursorcolumn-invisible-p (point)))
-        ;;         (goto-char (next-char-property-change (point))))
-        ;;       (forward-line 1))))
-
-        )
-    ;; Default action if cursorcolumn-visual-p returns true.
-    (vertical-motion n)))
+    (when (cursorcolumn-invisible-p (point))
+      (if (< n 0)
+          (while (and (not (bobp))
+                      (cursorcolumn-invisible-p (point)))
+            (goto-char (previous-char-property-change (point))))
+        (progn
+          (while (and (not (bobp))
+                      (cursorcolumn-invisible-p (point)))
+            (goto-char (next-char-property-change (point))))
+          (forward-line 1))))))
 
 (defun cursorcolumn-face (visual-p)
   (if visual-p
@@ -305,12 +302,12 @@ as text scaling."
      ((eolp)
       (move-overlay ovr (point) (point))
       (overlay-put ovr 'after-string str)
-      ;; Don't expand eol more than window width
-      (when (and (not truncate-lines)
-                 (>= (1+ column) (window-width))
-                 (>= column (cursorcolumn-current-column))
-                 (not (cursorcolumn-into-fringe-p)))
-        (delete-overlay ovr)))
+      ;; (when (and (not truncate-lines)
+      ;;            (>= (1+ column) (window-width))
+      ;;            (>= column (cursorcolumn-current-column))
+      ;;            (not (cursorcolumn-into-fringe-p)))
+      ;;   (delete-overlay ovr))
+      )
 
      ;; Handle fullwidth spaces
      ((and (not (null cursorcolumn-multiwidth-space-list))
@@ -345,7 +342,8 @@ as text scaling."
 
      ;; Check if faces should be used
      (face-p (move-overlay ovr (point) (1+ (point)))
-             (overlay-put ovr 'face (cursorcolumn-face visual-p))))))
+             (overlay-put ovr 'face (cursorcolumn-face visual-p)))
+     )))
 
 ;; FIXME: Very slow
 (defun cursorcolumn--update-overlay (cur-column column lcolumn i compose-p
@@ -390,13 +388,13 @@ as text scaling."
     ;; If a specific point is provided, move to it; otherwise, use the current point
     ;; This go to char is slow, according to the CPU and memory profiler:
     ;; 44% goto-char -> window-end -> jit-lock-function -> jit-lock-fontify-now -> jit-lock--run-functions
-    (let ((current-point (point)))
-      (if (and point (not (eq point current-point)))
-          (goto-char point)
-        (setq point current-point)))
-
     ;; Initialize variables for the operation
-    (let* ((column (cursorcolumn-current-column))  ;; Calculate the current column of the cursor
+    (let* ((current-point (if point
+                              (progn
+                                (goto-char point)
+                                (point))
+                            point))
+           (column (cursorcolumn-current-column))  ;; Calculate the current column of the cursor
            (lcolumn (current-column))              ;; Store the current column position
            (i 0)                                   ;; Initialize counter for overlay array
            (compose-p (memq cursorcolumn-style '(compose mixed)))  ;; Check if composition should be used
@@ -416,7 +414,7 @@ as text scaling."
       ;; Move to the end of the window
       (goto-char (window-end nil t))
       ;; Adjust position for showing the column line
-      (cursorcolumn-forward 0)
+      ;; (cursorcolumn-forward 0)
 
       ;; Loop until all visible lines are processed or overlay table capacity is
       ;; reached
@@ -425,7 +423,8 @@ as text scaling."
                     (< i window-height)
                     (< i length-overlay-table))
           (let ((cur-column (cursorcolumn-move-to-column column t)))
-            (unless (= (point) point)
+            (when (and (not (= (point) point))
+                       (not (cursorcolumn-invisible-p current-point)))
               ;; Only proceed if not on the original cursor line to prevent cluttering
               ;; non-cursor line only (workaround of eol probrem).
               (cursorcolumn--update-overlay cur-column column lcolumn i
