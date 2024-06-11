@@ -121,7 +121,7 @@ if `truncate-lines' is non-nil."
             (cursorcolumn-set-timer)
           (progn
             ;; (add-hook 'pre-command-hook 'cursorcolumn-post-command-hook nil t)
-            (add-hook 'after-change-functions 'cursorcolumn-post-command-hook nil t)
+            ;; (add-hook 'after-change-functions 'cursorcolumn-post-command-hook nil t)
             (add-hook 'post-command-hook 'cursorcolumn-post-command-hook nil t))))
     (cursorcolumn-cancel-timer)
     (cursorcolumn-clear)
@@ -138,8 +138,10 @@ if `truncate-lines' is non-nil."
   :group 'cursorcolumn)
 
 (defun cursorcolumn-pre-command-hook (&rest _)
-  (when (and cursorcolumn-mode (not (window-minibuffer-p)))
-    (cursorcolumn-clear)))
+  (let ((point (point)))
+    (when (and (boundp 'cursorcolumn-previous-cursor-position)
+               (not (= cursorcolumn-previous-cursor-position point)))
+      (cursorcolumn-clear))))
 
 (defun cursorcolumn-post-command-hook (&rest _)
   (when (bound-and-true-p cursorcolumn-mode)
@@ -148,7 +150,7 @@ if `truncate-lines' is non-nil."
                 (and (boundp 'cursorcolumn-previous-cursor-position)
                      (not (= cursorcolumn-previous-cursor-position point))))
         (setq-local cursorcolumn-previous-cursor-position point)
-        (cursorcolumn-clear)
+        ;; (cursorcolumn-clear)
         (when (and cursorcolumn-mode (not (window-minibuffer-p)))
           (cursorcolumn-show cursorcolumn-previous-cursor-position))))))
 
@@ -228,36 +230,44 @@ buffer's invisibility specifications."
   ;;            (assq inv buffer-invisibility-spec))))
   )
 
+(defun cursorcolumn-skip-invisible (n)
+  "Skip over invisible text. If N is negative, skip backward. Otherwise, skip forward."
+  (if (< n 0)
+      (while (and (not (bobp))
+                  (cursorcolumn-invisible-p (point)))
+        (goto-char (previous-single-property-change (point) 'invisible)))
+    (while (and (not (eobp))
+                (cursorcolumn-invisible-p (point)))
+      (goto-char (next-single-property-change (point) 'invisible)))
+    ;; Ensure the cursor is on a visible character.
+    ;; (while (and (not (eobp))
+    ;;             (cursorcolumn-invisible-p (point)))
+    ;;   (forward-line 1))
+    ))
+
 (defsubst cursorcolumn-forward (n)
   "Move N lines forward/backward. Validate the input immediately."
   (unless (memq n '(-1 0 1))
     (error "n(%s) must be 0 or 1" n))
 
   ;; Choose behavior based on visual state.
-  (if (cursorcolumn-visual-p)
-      ;; Default action if cursorcolumn-visual-p returns true.
-      (vertical-motion n)
-    ;; Move cursor in specified direction.
-    (forward-line n)
+  ;; (if (cursorcolumn-visual-p)
+  ;;     ;; Default action if cursorcolumn-visual-p returns true.
+  ;;     (vertical-motion n)
+  ;;   ;; Move cursor in specified direction.
+  ;;   (forward-line n)
+  ;;   ;; FIXME: Check if this part should be added back
+  ;;   ;; FIXME also Optimize this part
+  ;;   ;; Handling for invisible text.
+  ;;   ;; (org-mode, outline-mode...)
+  ;;   ;; (when (and (not (bobp))
+  ;;   ;;            (cursorcolumn-invisible-p (1- (point))))
+  ;;   ;;   ;; (goto-char (1- (point)))
+  ;;   ;;   (backward-char))
+  ;;   )
 
-    ;; Handling for invisible text.
-    ;; (org-mode, outline-mode...)
-    ;; FIXME Optimize this part
-    (when (and (not (bobp))
-               (cursorcolumn-invisible-p (1- (point))))
-      ;; (goto-char (1- (point)))  ;; FIXME Replaced with backward-char.
-      (backward-char))
-
-    (when (cursorcolumn-invisible-p (point))
-      (if (< n 0)
-          (while (and (not (bobp))
-                      (cursorcolumn-invisible-p (point)))
-            (goto-char (previous-char-property-change (point))))
-        (progn
-          (while (and (not (bobp))
-                      (cursorcolumn-invisible-p (point)))
-            (goto-char (next-char-property-change (point))))
-          (forward-line 1))))))
+  (forward-line n)
+  (cursorcolumn-skip-invisible n))
 
 (defun cursorcolumn-face (visual-p)
   (if visual-p
