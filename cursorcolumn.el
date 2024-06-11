@@ -439,6 +439,7 @@ consideration other changes in the window, such as text scaling."
         (while (and (not in-fringe-p)
                     (< i window-height)
                     (< i length-overlay-table))
+          (setq current-point (point))
           (when (not (cursorcolumn-invisible-p current-point))
             (let ((cur-column (cursorcolumn-move-to-column column t)))
               ;; Only proceed if not on the original cursor line to prevent cluttering
@@ -450,7 +451,6 @@ consideration other changes in the window, such as text scaling."
           (cursorcolumn-forward -1)
           (when (bobp)
             (throw 'break nil))
-          (setq current-point (point))
           (setq i (1+ i)))))))
 
 (provide 'cursorcolumn)
