@@ -249,29 +249,48 @@ buffer's invisibility specifications."
     ;;   (forward-line 1))
     ))
 
+;; (defsubst cursorcolumn-forward (n)
+;;   "Move N lines forward/backward. Validate the input immediately."
+;;   (unless (memq n '(-1 0 1))
+;;     (error "n(%s) must be 0 or 1" n))
+
+;;   ;; Choose behavior based on visual state.
+;;   ;; (if (cursorcolumn-visual-p)
+;;   ;;     ;; Default action if cursorcolumn-visual-p returns true.
+;;   ;;     (vertical-motion n)
+;;   ;;   ;; Move cursor in specified direction.
+;;   ;;   (forward-line n)
+;;   ;;   ;; FIXME: Check if this part should be added back
+;;   ;;   ;; FIXME also Optimize this part
+;;   ;;   ;; Handling for invisible text.
+;;   ;;   ;; (org-mode, outline-mode...)
+;;   ;;   ;; (when (and (not (bobp))
+;;   ;;   ;;            (cursorcolumn-invisible-p (1- (point))))
+;;   ;;   ;;   ;; (goto-char (1- (point)))
+;;   ;;   ;;   (backward-char))
+;;   ;;   )
+
+;;   (forward-line n)
+;;   (cursorcolumn-skip-invisible n))
+
 (defsubst cursorcolumn-forward (n)
-  "Move N lines forward/backward. Validate the input immediately."
   (unless (memq n '(-1 0 1))
     (error "n(%s) must be 0 or 1" n))
-
-  ;; Choose behavior based on visual state.
-  ;; (if (cursorcolumn-visual-p)
-  ;;     ;; Default action if cursorcolumn-visual-p returns true.
-  ;;     (vertical-motion n)
-  ;;   ;; Move cursor in specified direction.
-  ;;   (forward-line n)
-  ;;   ;; FIXME: Check if this part should be added back
-  ;;   ;; FIXME also Optimize this part
-  ;;   ;; Handling for invisible text.
-  ;;   ;; (org-mode, outline-mode...)
-  ;;   ;; (when (and (not (bobp))
-  ;;   ;;            (cursorcolumn-invisible-p (1- (point))))
-  ;;   ;;   ;; (goto-char (1- (point)))
-  ;;   ;;   (backward-char))
-  ;;   )
-
-  (forward-line n)
-  (cursorcolumn-skip-invisible n))
+  (if (not (cursorcolumn-visual-p))
+      (progn
+	    (forward-line n)
+	    ;; take care of org-mode, outline-mode
+	    (when (and (not (bobp))
+		           (cursorcolumn-invisible-p (1- (point))))
+	      (goto-char (1- (point))))
+	    (when (cursorcolumn-invisible-p (point))
+	      (if (< n 0)
+	          (while (and (not (bobp)) (cursorcolumn-invisible-p (point)))
+		        (goto-char (previous-char-property-change (point))))
+	        (while (and (not (bobp)) (cursorcolumn-invisible-p (point)))
+	          (goto-char (next-char-property-change (point))))
+	        (forward-line 1))))
+    (vertical-motion n)))
 
 (defun cursorcolumn-face (visual-p)
   (if visual-p
@@ -439,18 +458,18 @@ consideration other changes in the window, such as text scaling."
         (while (and (not in-fringe-p)
                     (< i window-height)
                     (< i length-overlay-table))
-          (setq current-point (point))
-          (when (not (cursorcolumn-invisible-p current-point))
-            (let ((cur-column (cursorcolumn-move-to-column column t)))
+          (let ((cur-column (cursorcolumn-move-to-column column t)))
+            (setq current-point (point))
+            (when (not (cursorcolumn-invisible-p current-point))
               ;; Only proceed if not on the original cursor line to prevent cluttering
               ;; non-cursor line only (workaround of eol probrem).
               (cursorcolumn--update-overlay cur-column column lcolumn i
                                             compose-p face-p line-char line-str
                                             visual-line-str point)))
 
-          (cursorcolumn-forward -1)
           (when (bobp)
             (throw 'break nil))
+          (cursorcolumn-forward -1)
           (setq i (1+ i)))))))
 
 (provide 'cursorcolumn)
