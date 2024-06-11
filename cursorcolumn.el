@@ -431,6 +431,7 @@ consideration other changes in the window, such as text scaling."
       (goto-char (window-end nil t))
       ;; Adjust position for showing the column line
       ;; (cursorcolumn-forward 0)
+      (cursorcolumn-skip-invisible -1)
 
       ;; Loop until all visible lines are processed or overlay table capacity is
       ;; reached
@@ -438,19 +439,19 @@ consideration other changes in the window, such as text scaling."
         (while (and (not in-fringe-p)
                     (< i window-height)
                     (< i length-overlay-table))
-          (let ((cur-column (cursorcolumn-move-to-column column t)))
-            (when (and (not (= (point) point))
-                       (not (cursorcolumn-invisible-p current-point)))
+          (when (not (cursorcolumn-invisible-p current-point))
+            (let ((cur-column (cursorcolumn-move-to-column column t)))
               ;; Only proceed if not on the original cursor line to prevent cluttering
               ;; non-cursor line only (workaround of eol probrem).
               (cursorcolumn--update-overlay cur-column column lcolumn i
                                             compose-p face-p line-char line-str
-                                            visual-line-str point))
+                                            visual-line-str point)))
 
-            (setq i (1+ i))
-            (when (bobp)
-              (throw 'break nil))
-            (cursorcolumn-forward -1)))))))
+          (cursorcolumn-forward -1)
+          (when (bobp)
+            (throw 'break nil))
+          (setq current-point (point))
+          (setq i (1+ i)))))))
 
 (provide 'cursorcolumn)
 ;;; cursorcolumn.el ends here
