@@ -216,18 +216,20 @@ If AT-LINE-BEGINNING is non-nil, the movement is adjusted from the beginning of 
          bol-col))))
 
 (defsubst cursorcolumn-invisible-p (pos)
-  "Check if the character at position POS is invisible. This function examines
-   the invisible property of the character at the specified position and
-   determines if it is considered invisible according to the current buffer's
-   invisibility specifications."
-  (let ((inv (get-char-property pos 'invisible)))
-    (and inv
-         (or (eq buffer-invisibility-spec t)
-             (memq inv buffer-invisibility-spec)
-             (assq inv buffer-invisibility-spec)))))
+  "Check if the character at position POS is invisible.
+This function examines the invisible property of the character at the specified
+position and determines if it is considered invisible according to the current
+buffer's invisibility specifications."
+  (invisible-p pos)
+  ;; (let ((inv (get-char-property pos 'invisible)))
+  ;;   (and inv
+  ;;        (or (eq buffer-invisibility-spec t)
+  ;;            (memq inv buffer-invisibility-spec)
+  ;;            (assq inv buffer-invisibility-spec))))
+  )
 
 (defsubst cursorcolumn-forward (n)
-  ;; Validate the input immediately.
+  "Move N lines forward/backward. Validate the input immediately."
   (unless (memq n '(-1 0 1))
     (error "n(%s) must be 0 or 1" n))
 
@@ -263,9 +265,9 @@ If AT-LINE-BEGINNING is non-nil, the movement is adjusted from the beginning of 
     cursorcolumn-face))
 
 (defun cursorcolumn--calculate-window-visible-lines ()
-  "A more accurate alternative to (window-height) is one that calculates the number of
-lines in the current window, taking into consideration other changes in the window, such
-as text scaling."
+  "A more accurate alternative to (window-height).
+It calculates the number of lines in the current window, taking into
+consideration other changes in the window, such as text scaling."
   (let ((beginning-line (line-number-at-pos (window-start)))
         (end-line (line-number-at-pos (window-end))))
     (+ 1 (- end-line beginning-line))))
