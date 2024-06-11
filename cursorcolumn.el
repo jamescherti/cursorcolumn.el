@@ -1,11 +1,11 @@
 ;;; cursorcolumn.el --- Column highlighting (vertical line displaying) mode -*- lexical-binding: t -*-
 ;;
-;; Maintainer: James cherti
+;; Author: James cherti
 ;; URL: https://github.com/jamescherti/cursorcolumn.el
-;;
 ;; Keywords: faces, editing, emulating
 ;; Package-Requires: ((emacs "24.3"))
 ;; Original Author: Taiki SUGAWARA <buzz.taiki@gmail.com>
+;; Package-Version: 1
 ;;
 ;; Copyright (C) 2024 by James Cherti | https://www.jamescherti.com/
 ;; Copyright (C) 2002-2021 by Taiki SUGAWARA <buzz.taiki@gmail.com>
@@ -26,7 +26,6 @@
 ;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
-
 ;; `cursorcolumn-mode' is a minor mode for highlighting column at cursor
 ;; position.  To enable it in a buffer, type M-x cursorcolumn-mode.
 
