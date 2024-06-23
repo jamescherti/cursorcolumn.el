@@ -7,8 +7,8 @@
 ;; Original Author: Taiki SUGAWARA <buzz.taiki@gmail.com>
 ;; Package-Version: 1
 ;;
-;; Copyright (C) 2024 by James Cherti | https://www.jamescherti.com/
-;; Copyright (C) 2002-2021 by Taiki SUGAWARA <buzz.taiki@gmail.com>
+;; Copyright (C) 2024 James Cherti | https://www.jamescherti.com/
+;; Copyright (C) 2002-2021 Taiki SUGAWARA <buzz.taiki@gmail.com>
 ;;
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
