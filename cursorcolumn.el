@@ -230,7 +230,6 @@ as text scaling."
 
 (defun cursorcolumn-show (&optional point)
   (cursorcolumn-clear)
-  (save-window-excursion
     (save-excursion
       (if point
           (goto-char point)
@@ -332,7 +331,7 @@ as text scaling."
                     (move-overlay ovr (point) (1+ (point)))
                     (overlay-put ovr 'face (cursorcolumn-face visual-p))))))))
             (setq i (1+ i))
-            (cursorcolumn-forward -1)))))))
+            (cursorcolumn-forward -1))))))
 
 (provide 'cursorcolumn)
 ;;; cursorcolumn.el ends here
