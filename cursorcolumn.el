@@ -93,7 +93,7 @@ if `truncate-lines' is non-nil."
           (const force))
   :group 'cursorcolumn)
 
-(defcustom cursorcolumn-use-timer t
+(defcustom cursorcolumn-use-timer nil
   "If non-nil, use idle timer instead of (post|after)-command-hook."
   :type 'boolean
   :group 'cursorcolumn)
