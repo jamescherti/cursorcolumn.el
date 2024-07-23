@@ -232,108 +232,108 @@ as text scaling."
 
 (defun cursorcolumn-show (&optional point)
   (cursorcolumn-clear)
-    (save-excursion
-      (if point
-          (goto-char point)
-        (setq point (point)))
-      (let* ((column (cursorcolumn-current-column))
-             (lcolumn (current-column))
-             (i 0)
-             (compose-p (memq cursorcolumn-style '(compose mixed)))
-             (face-p (memq cursorcolumn-style '(face mixed)))
-             (line-char (if compose-p cursorcolumn-line-char ?\ ))
-             (line-str (make-string 1 line-char))
-             (visual-line-str line-str)
-             (window-height (cursorcolumn--calculate-window-visible-lines))
-             (in-fringe-p (cursorcolumn-into-fringe-p)))
-        (when face-p
-          (setq line-str (propertize line-str 'face (cursorcolumn-face nil)))
-          (setq visual-line-str (propertize visual-line-str 'face (cursorcolumn-face t))))
-        (goto-char (window-end nil t))
-        (cursorcolumn-forward 0)
-        (while (and (not in-fringe-p)
-                    (< i window-height)
-                    (< i (length cursorcolumn-overlay-table))
-                    (not (bobp)))
-          (let ((cur-column (cursorcolumn-move-to-column column t)))
-            ;; non-cursor line only (workaround of eol probrem.
-            (unless (= (point) point)
-              ;; if column over the cursor's column (when tab or wide char is appered.
-              (when (> cur-column column)
-                (let ((lcol (current-column)))
-                  (backward-char)
-                  (setq cur-column (- cur-column (- lcol (current-column))))))
-              (let* ((ovr (aref cursorcolumn-overlay-table i))
-                     (visual-p (or (< lcolumn (current-column))
-                                   (> lcolumn (+ (current-column)
-                                                 (- column cur-column)))))
-                     ;; consider a newline, tab and wide char.
-                     (str (concat (make-string (- column cur-column) ?\ )
-                                  (if visual-p visual-line-str line-str)))
-                     (char (char-after)))
-                ;; create overlay if not found.
-                (unless ovr
-                  (setq ovr (make-overlay 0 0))
-                  (overlay-put ovr 'rear-nonsticky t)
-                  (aset cursorcolumn-overlay-table i ovr))
+  (save-excursion
+    (if point
+        (goto-char point)
+      (setq point (point)))
+    (let* ((column (cursorcolumn-current-column))
+           (lcolumn (current-column))
+           (i 0)
+           (compose-p (memq cursorcolumn-style '(compose mixed)))
+           (face-p (memq cursorcolumn-style '(face mixed)))
+           (line-char (if compose-p cursorcolumn-line-char ?\ ))
+           (line-str (make-string 1 line-char))
+           (visual-line-str line-str)
+           (window-height (cursorcolumn--calculate-window-visible-lines))
+           (in-fringe-p (cursorcolumn-into-fringe-p)))
+      (when face-p
+        (setq line-str (propertize line-str 'face (cursorcolumn-face nil)))
+        (setq visual-line-str (propertize visual-line-str 'face (cursorcolumn-face t))))
+      (goto-char (window-end nil t))
+      (cursorcolumn-forward 0)
+      (while (and (not in-fringe-p)
+                  (< i window-height)
+                  (< i (length cursorcolumn-overlay-table))
+                  (not (bobp)))
+        (let ((cur-column (cursorcolumn-move-to-column column t)))
+          ;; non-cursor line only (workaround of eol probrem.
+          (unless (= (point) point)
+            ;; if column over the cursor's column (when tab or wide char is appered.
+            (when (> cur-column column)
+              (let ((lcol (current-column)))
+                (backward-char)
+                (setq cur-column (- cur-column (- lcol (current-column))))))
+            (let* ((ovr (aref cursorcolumn-overlay-table i))
+                   (visual-p (or (< lcolumn (current-column))
+                                 (> lcolumn (+ (current-column)
+                                               (- column cur-column)))))
+                   ;; consider a newline, tab and wide char.
+                   (str (concat (make-string (- column cur-column) ?\ )
+                                (if visual-p visual-line-str line-str)))
+                   (char (char-after)))
+              ;; create overlay if not found.
+              (unless ovr
+                (setq ovr (make-overlay 0 0))
+                (overlay-put ovr 'rear-nonsticky t)
+                (aset cursorcolumn-overlay-table i ovr))
 
-                ;; initialize overlay.
-                (overlay-put ovr 'face nil)
-                (overlay-put ovr 'before-string nil)
-                (overlay-put ovr 'after-string nil)
-                (overlay-put ovr 'invisible nil)
-                (overlay-put ovr 'window
-                             (if cursorcolumn-current-window-only
-                                 (selected-window)
-                               nil))
+              ;; initialize overlay.
+              (overlay-put ovr 'face nil)
+              (overlay-put ovr 'before-string nil)
+              (overlay-put ovr 'after-string nil)
+              (overlay-put ovr 'invisible nil)
+              (overlay-put ovr 'window
+                           (if cursorcolumn-current-window-only
+                               (selected-window)
+                             nil))
 
+              (cond
+               ;; multiwidth space
+               ((memq char cursorcolumn-multiwidth-space-list)
+                (setq str
+                      (concat str
+                              (make-string (- (save-excursion (forward-char)
+                                                              (current-column))
+                                              (current-column)
+                                              (string-width str))
+                                           ?\ )))
+                (move-overlay ovr (point) (1+ (point)))
+                (overlay-put ovr 'invisible t)
+                (overlay-put ovr 'after-string str))
+               ;; eol
+               ((eolp)
+                (move-overlay ovr (point) (point))
+                (overlay-put ovr 'after-string str)
+                ;; don't expand eol more than window width
+                (when (and (not truncate-lines)
+                           (>= (1+ column) (window-width))
+                           (>= column (cursorcolumn-current-column))
+                           (not (cursorcolumn-into-fringe-p)))
+                  (delete-overlay ovr)))
+               (t
                 (cond
-                 ;; multiwidth space
-                 ((memq char cursorcolumn-multiwidth-space-list)
-                  (setq str
-                        (concat str
-                                (make-string (- (save-excursion (forward-char)
-                                                                (current-column))
-                                                (current-column)
-                                                (string-width str))
-                                             ?\ )))
+                 (compose-p
+                  (let (str)
+                    (when char
+                      (setq str (compose-chars
+                                 char
+                                 (cond ((= (char-width char) 1)
+                                        '(tc . tc))
+                                       ((= cur-column column)
+                                        '(tc . tr))
+                                       (t
+                                        '(tc . tl)))
+                                 line-char))
+                      (when face-p
+                        (setq str (propertize str 'face (cursorcolumn-face visual-p))))
+                      (move-overlay ovr (point) (1+ (point)))
+                      (overlay-put ovr 'invisible t)
+                      (overlay-put ovr 'after-string str))))
+                 (face-p
                   (move-overlay ovr (point) (1+ (point)))
-                  (overlay-put ovr 'invisible t)
-                  (overlay-put ovr 'after-string str))
-                 ;; eol
-                 ((eolp)
-                  (move-overlay ovr (point) (point))
-                  (overlay-put ovr 'after-string str)
-                  ;; don't expand eol more than window width
-                  (when (and (not truncate-lines)
-                             (>= (1+ column) (window-width))
-                             (>= column (cursorcolumn-current-column))
-                             (not (cursorcolumn-into-fringe-p)))
-                    (delete-overlay ovr)))
-                 (t
-                  (cond
-                   (compose-p
-                    (let (str)
-                      (when char
-                        (setq str (compose-chars
-                                   char
-                                   (cond ((= (char-width char) 1)
-                                          '(tc . tc))
-                                         ((= cur-column column)
-                                          '(tc . tr))
-                                         (t
-                                          '(tc . tl)))
-                                   line-char))
-                        (when face-p
-                          (setq str (propertize str 'face (cursorcolumn-face visual-p))))
-                        (move-overlay ovr (point) (1+ (point)))
-                        (overlay-put ovr 'invisible t)
-                        (overlay-put ovr 'after-string str))))
-                   (face-p
-                    (move-overlay ovr (point) (1+ (point)))
-                    (overlay-put ovr 'face (cursorcolumn-face visual-p))))))))
-            (setq i (1+ i))
-            (cursorcolumn-forward -1))))))
+                  (overlay-put ovr 'face (cursorcolumn-face visual-p))))))))
+          (setq i (1+ i))
+          (cursorcolumn-forward -1))))))
 
 (provide 'cursorcolumn)
 ;;; cursorcolumn.el ends here
