@@ -32,6 +32,8 @@
 
 ;;; Code:
 
+(require 'hl-line)
+
 (defvar cursorcolumn-overlay-table-size 200)
 (defvar cursorcolumn-overlay-table (make-vector cursorcolumn-overlay-table-size nil))
 (defvar cursorcolumn-line-char ?|)
@@ -55,7 +57,7 @@ Available values are followings:
   :group 'cursorcolumn)
 
 (defface cursorcolumn
-  '((t (:background "light steel blue")))
+  '((t :inherit hl-line :extend t))
   "A default face for vertical line highlighting."
   :group 'cursorcolumn)
 
