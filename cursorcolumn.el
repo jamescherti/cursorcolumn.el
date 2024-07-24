@@ -151,6 +151,7 @@ if `truncate-lines' is non-nil."
 
 (defun cursorcolumn-timer-callback ()
   (when (and cursorcolumn-mode (not (minibufferp)))
+    (cursorcolumn-clear)
     (cursorcolumn-show)))
 
 (defun cursorcolumn-clear ()
@@ -245,7 +246,6 @@ consideration other changes in the window, such as text scaling."
 
 (defun cursorcolumn-show (&optional point)
   (save-excursion
-    (cursorcolumn-clear)
     (unless point
       (setq point (point)))
     (let* ((column (cursorcolumn-current-column))
