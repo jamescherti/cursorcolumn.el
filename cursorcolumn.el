@@ -245,19 +245,25 @@ as text scaling."
            (line-str (make-string 1 line-char))
            (visual-line-str line-str)
            (window-height (cursorcolumn--calculate-window-visible-lines))
-           (in-fringe-p (cursorcolumn-into-fringe-p)))
+           (in-fringe-p (cursorcolumn-into-fringe-p))
+           (beginning-of-file nil)
+           (previous-line nil))
       (when face-p
         (setq line-str (propertize line-str 'face (cursorcolumn-face nil)))
         (setq visual-line-str (propertize visual-line-str 'face (cursorcolumn-face t))))
       (goto-char (window-end nil t))
       (cursorcolumn-forward 0)
       (while (and (not in-fringe-p)
-                  (< i window-height)
+                  (<= i window-height)
                   (< i (length cursorcolumn-overlay-table))
-                  (not (bobp)))
-        (let ((cur-column (cursorcolumn-move-to-column column t)))
+                  (not beginning-of-file))
+        (let ((cur-column (cursorcolumn-move-to-column column t))
+              (cur-line (line-number-at-pos)))
           ;; non-cursor line only (workaround of eol probrem.
-          (unless (= (point) point)
+          (when (and (/= (point) point)
+                     (or (not previous-line)
+                         (/= previous-line cur-line)))
+            (setq previous-line (line-number-at-pos))
             ;; if column over the cursor's column (when tab or wide char is appered.
             (when (> cur-column column)
               (let ((lcol (current-column)))
@@ -333,6 +339,11 @@ as text scaling."
                   (move-overlay ovr (point) (1+ (point)))
                   (overlay-put ovr 'face (cursorcolumn-face visual-p))))))))
           (setq i (1+ i))
+
+          ;; Bug fix: Also include the first line
+          (when (bobp)
+            (setq beginning-of-file t))
+          (setq previous-line (line-number-at-pos))
           (cursorcolumn-forward -1))))))
 
 (provide 'cursorcolumn)
