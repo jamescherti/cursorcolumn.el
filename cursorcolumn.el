@@ -255,7 +255,7 @@ as text scaling."
       (goto-char (window-end nil t))
       (cursorcolumn-forward 0)
       (while (and (not in-fringe-p)
-                  (<= i window-height)
+                  (< i window-height)
                   (< i (length cursorcolumn-overlay-table))
                   (not beginning-of-file))
         (let ((cur-column (cursorcolumn-move-to-column column t))
