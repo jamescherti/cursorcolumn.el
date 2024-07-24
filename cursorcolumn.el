@@ -158,12 +158,17 @@ if `truncate-lines' is non-nil."
     (cursorcolumn-show)))
 
 (defun cursorcolumn-clear ()
+  ;; FIXME: Slow
   (mapcar (lambda (ovr)
             (and ovr (delete-overlay ovr)))
           cursorcolumn-overlay-table))
 
 (defsubst cursorcolumn-into-fringe-p ()
-  (eq (nth 1 (posn-at-point)) 'right-fringe))
+  ;; Disabled cursorcolumn-into-fringe-p because it is
+  ;; slow (14%)
+  nil
+  ;; (eq (nth 1 (posn-at-point)) 'right-fringe)
+  )
 
 (defsubst cursorcolumn-visual-p ()
   (or (eq cursorcolumn-visual 'force)
@@ -172,27 +177,36 @@ if `truncate-lines' is non-nil."
 
 (defsubst cursorcolumn-current-column ()
   (if (or (not (cursorcolumn-visual-p))
-          ;; margin for full-width char
+          ;; Margin for full-width char
           (< (1+ (current-column)) (window-width)))
       (current-column)
-    ;; hmm.. posn-at-point is not consider tab width.
+    ;; When in visual mode and at the edge, adjust the column calculation.
     (- (current-column)
        (save-excursion
          (vertical-motion 0)
+         ;; TODO: Try beginning-of-line
+         ;; (beginning-of-line)
          (current-column)))))
 
-(defsubst cursorcolumn-move-to-column (col &optional bol-p)
+(defsubst cursorcolumn-move-to-column (target-col &optional at-line-beginning)
+  "Move the cursor to the specified column TARGET-COL.
+If AT-LINE-BEGINNING is non-nil, the movement is adjusted from the beginning of
+the line."
   (if (or (not (cursorcolumn-visual-p))
           ;; margin for full-width char
           (< (1+ (current-column)) (window-width)))
-      (move-to-column col)
-    (unless bol-p
+      (move-to-column target-col)
+    (unless at-line-beginning
       (vertical-motion 0))
     (let ((bol-col (current-column)))
-      (- (move-to-column (+ bol-col col))
+      (- (move-to-column (+ bol-col target-col))
          bol-col))))
 
 (defsubst cursorcolumn-invisible-p (pos)
+  "Check if the character at position POS is invisible.
+This function examines the invisible property of the character at the specified
+position and determines if it is considered invisible according to the current
+buffer's invisibility specifications."
   (invisible-p pos)
   ;; (let ((inv (get-char-property pos 'invisible)))
   ;;   (and inv
@@ -226,9 +240,9 @@ if `truncate-lines' is non-nil."
     cursorcolumn-face))
 
 (defun cursorcolumn--calculate-window-visible-lines ()
-  "A more accurate alternative to (window-height) is one that calculates the number of
-lines in the current window, taking into consideration other changes in the window, such
-as text scaling."
+  "A more accurate alternative to (window-height).
+It calculates the number of lines in the current window, taking into
+consideration other changes in the window, such as text scaling."
   (let ((beginning-line (line-number-at-pos (window-start)))
         (end-line (line-number-at-pos (window-end))))
     (+ 1 (- end-line beginning-line))))
@@ -317,9 +331,7 @@ as text scaling."
                 (when (and (not truncate-lines)
                            (>= (1+ column) (window-width))
                            (>= column (cursorcolumn-current-column))
-                           ;; Disabled cursorcolumn-into-fringe-p because it is
-                           ;; slow (14%)
-                           ;; (not (cursorcolumn-into-fringe-p))
+                           (not (cursorcolumn-into-fringe-p))
                            )
                   (delete-overlay ovr)))
                (t
