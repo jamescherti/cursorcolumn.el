@@ -246,8 +246,7 @@ consideration other changes in the window, such as text scaling."
 (defun cursorcolumn-show (&optional point)
   (save-excursion
     (cursorcolumn-clear)
-    (if point
-        (goto-char point)
+    (unless point
       (setq point (point)))
     (let* ((column (cursorcolumn-current-column))
            (lcolumn (current-column))
