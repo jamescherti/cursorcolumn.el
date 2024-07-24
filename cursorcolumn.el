@@ -193,11 +193,13 @@ if `truncate-lines' is non-nil."
          bol-col))))
 
 (defsubst cursorcolumn-invisible-p (pos)
-  (let ((inv (get-char-property pos 'invisible)))
-    (and inv
-         (or (eq buffer-invisibility-spec t)
-             (memq inv buffer-invisibility-spec)
-             (assq inv buffer-invisibility-spec)))))
+  (invisible-p pos)
+  ;; (let ((inv (get-char-property pos 'invisible)))
+  ;;   (and inv
+  ;;        (or (eq buffer-invisibility-spec t)
+  ;;            (memq inv buffer-invisibility-spec)
+  ;;            (assq inv buffer-invisibility-spec))))
+  )
 
 (defsubst cursorcolumn-forward (n)
   (unless (memq n '(-1 0 1))
@@ -315,7 +317,10 @@ as text scaling."
                 (when (and (not truncate-lines)
                            (>= (1+ column) (window-width))
                            (>= column (cursorcolumn-current-column))
-                           (not (cursorcolumn-into-fringe-p)))
+                           ;; Disabled cursorcolumn-into-fringe-p because it is
+                           ;; slow (14%)
+                           ;; (not (cursorcolumn-into-fringe-p))
+                           )
                   (delete-overlay ovr)))
                (t
                 (cond
