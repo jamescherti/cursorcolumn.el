@@ -93,7 +93,7 @@ if `truncate-lines' is non-nil."
           (const force))
   :group 'cursorcolumn)
 
-(defcustom cursorcolumn-use-timer nil
+(defcustom cursorcolumn-use-timer t
   "If non-nil, use idle timer instead of (post|after)-command-hook."
   :type 'boolean
   :group 'cursorcolumn)
@@ -112,15 +112,12 @@ if `truncate-lines' is non-nil."
   (if cursorcolumn-mode
       (progn
         (add-hook 'pre-command-hook 'cursorcolumn-pre-command-hook nil t)
-        (if cursorcolumn-use-timer
-            (cursorcolumn-set-timer)
-          (progn
-            ;; (add-hook 'after-change-functions 'cursorcolumn-after-change-functions nil t)
-            (add-hook 'post-command-hook 'cursorcolumn-post-command-hook nil t))))
+        (add-hook 'post-command-hook 'cursorcolumn-post-command-hook nil t)
+        (when cursorcolumn-use-timer
+          (cursorcolumn-set-timer)))
     (progn
       (cursorcolumn-cancel-timer)
       (cursorcolumn-clear)
-      (remove-hook 'after-change-functions 'cursorcolumn-after-change-functions)
       (remove-hook 'pre-command-hook 'cursorcolumn-pre-command-hook t)
       (remove-hook 'post-command-hook 'cursorcolumn-post-command-hook t))))
 
