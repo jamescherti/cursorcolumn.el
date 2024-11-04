@@ -14,7 +14,7 @@ This package is a fork of vline.el and offers improvements in performance and bu
 
 ### Install using straight
 
-To install the `cursorcolumn` using `straight.el`:
+To install `cursorcolumn` using `straight.el`:
 
 1. If you haven't already done so, [add the straight.el bootstrap code](https://github.com/radian-software/straight.el?tab=readme-ov-file#getting-started) to your init file.
 
