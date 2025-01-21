@@ -7,7 +7,7 @@
 ;; Package-Requires: ((emacs "24.3"))
 ;; Original Author: Taiki SUGAWARA <buzz.taiki@gmail.com>
 ;;
-;; Copyright (C) 2024 by James Cherti | https://www.jamescherti.com/
+;; Copyright (C) 2024-2025 by James Cherti | https://www.jamescherti.com/
 ;; Copyright (C) 2002, 2008-2021 by Taiki SUGAWARA <buzz.taiki@gmail.com>
 ;;
 ;; This file is free software; you can redistribute it and/or modify

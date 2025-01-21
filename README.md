@@ -30,7 +30,7 @@ To install `cursorcolumn` with `straight.el`:
 
 ## License
 
- Copyright (C) 2024 by James Cherti | https://www.jamescherti.com/
+ Copyright (C) 2024-2025 by James Cherti | https://www.jamescherti.com/
  Copyright (C) 2002, 2008-2021 by Taiki SUGAWARA <buzz.taiki@gmail.com>
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
