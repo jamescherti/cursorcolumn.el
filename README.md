@@ -21,7 +21,6 @@ To install `cursorcolumn` with `straight.el`:
 2. Add the following code to your Emacs init file:
 ```
 (use-package cursorcolumn
-  :ensure t
   :straight (cursorcolumn
              :type git
              :host github
