@@ -34,15 +34,30 @@
 
 (require 'hl-line)
 
-(defvar cursorcolumn-overlay-table-size 200)
-(defvar cursorcolumn-overlay-table (make-vector cursorcolumn-overlay-table-size nil))
-(defvar cursorcolumn-line-char ?|)
+(defgroup cursorcolumn nil
+  "Highlight the current cursor column."
+  :group 'convenience
+  :group 'faces
+  :prefix "cursorcolumn-")
+
+(defvar cursorcolumn-overlay-table-size 200
+  "Maximum number of overlays stored in `cursorcolumn-overlay-table'.")
+
+(defvar-local cursorcolumn-overlay-table nil
+  "Buffer-local vector of overlays used to highlight the cursor column.")
+
+(defvar cursorcolumn-line-char ?|
+  "Character used for vertical line composition.")
+
 (defvar cursorcolumn-multiwidth-space-list
   (list
    ?\t
    (decode-char 'ucs #x3000)    ; japanese fullwidth space
-   ))
-(defvar cursorcolumn-timer nil)
+   )
+  "List of multi-width whitespace characters.")
+
+(defvar cursorcolumn-timer nil
+  "Idle timer used to update the cursor column highlight.")
 
 (defcustom cursorcolumn-style 'face
   "This variable holds vertical line display style.
@@ -62,7 +77,7 @@ Available values are followings:
   :group 'cursorcolumn)
 
 (defface cursorcolumn-visual
-  '((t (:background "gray90")))
+  '((t :background "gray90"))
   "A default face for vertical line highlighting in visual lines."
   :group 'cursorcolumn)
 
@@ -111,15 +126,21 @@ if `truncate-lines' is non-nil."
   :group 'cursorcolumn
   (if cursorcolumn-mode
       (progn
-        (add-hook 'pre-command-hook 'cursorcolumn-pre-command-hook nil t)
-        (add-hook 'post-command-hook 'cursorcolumn-post-command-hook nil t)
-        (when cursorcolumn-use-timer
-          (cursorcolumn-set-timer)))
+        (unless (vectorp cursorcolumn-overlay-table)
+          (setq cursorcolumn-overlay-table
+                (make-vector cursorcolumn-overlay-table-size nil)))
+        (add-hook 'pre-command-hook #'cursorcolumn-pre-command-hook nil t)
+        (add-hook 'post-command-hook #'cursorcolumn-post-command-hook nil t)
+        (add-hook 'kill-buffer-hook #'cursorcolumn-clear nil t)
+        (if cursorcolumn-use-timer
+            (cursorcolumn-set-timer)
+          (cursorcolumn-show)))
     (progn
       (cursorcolumn-cancel-timer)
       (cursorcolumn-clear)
-      (remove-hook 'pre-command-hook 'cursorcolumn-pre-command-hook t)
-      (remove-hook 'post-command-hook 'cursorcolumn-post-command-hook t))))
+      (remove-hook 'pre-command-hook #'cursorcolumn-pre-command-hook t)
+      (remove-hook 'post-command-hook #'cursorcolumn-post-command-hook t)
+      (remove-hook 'kill-buffer-hook #'cursorcolumn-clear t))))
 
 ;;;###autoload
 (define-global-minor-mode cursorcolumn-global-mode
@@ -130,37 +151,57 @@ if `truncate-lines' is non-nil."
   :group 'cursorcolumn)
 
 (defun cursorcolumn-pre-command-hook ()
+  "Clear the cursor column highlight before executing a command."
   (when (and cursorcolumn-mode (not (minibufferp)))
     (cursorcolumn-clear)))
 
 (defun cursorcolumn-post-command-hook ()
-  (when (and cursorcolumn-mode (not (minibufferp)))
+  "Update the cursor column highlight after executing a command."
+  (when (and cursorcolumn-mode
+             (not cursorcolumn-use-timer)
+             (not (minibufferp)))
     (cursorcolumn-show)))
 
 (defun cursorcolumn-after-change-functions (beg end len)
+  "Update the cursor column after a buffer modification.
+BEG and END specify the modified region bounds, and LEN is the pre-change
+length."
+  (ignore beg end len)
   (cursorcolumn-post-command-hook))
 
 (defun cursorcolumn-set-timer ()
-  (setq cursorcolumn-timer
-        (run-with-idle-timer
-         cursorcolumn-idle-time t 'cursorcolumn-timer-callback)))
+  "Start the idle timer for highlighting the cursor column."
+  (unless (timerp cursorcolumn-timer)
+    (setq cursorcolumn-timer
+          (run-with-idle-timer
+           cursorcolumn-idle-time t #'cursorcolumn-timer-callback))))
 
 (defun cursorcolumn-cancel-timer ()
-  (when (timerp cursorcolumn-timer)
-    (cancel-timer cursorcolumn-timer)))
+  "Cancel the idle timer if no buffer has `cursorcolumn-mode' enabled."
+  (when (and (timerp cursorcolumn-timer)
+             (not (catch 'active
+                    (dolist (buf (buffer-list))
+                      (when (buffer-local-value 'cursorcolumn-mode buf)
+                        (throw 'active t))))))
+    (cancel-timer cursorcolumn-timer)
+    (setq cursorcolumn-timer nil)))
 
 (defun cursorcolumn-timer-callback ()
+  "Refresh the cursor column highlight when Emacs is idle."
   (when (and cursorcolumn-mode (not (minibufferp)))
     (cursorcolumn-clear)
     (cursorcolumn-show)))
 
 (defun cursorcolumn-clear ()
+  "Delete all active overlays in `cursorcolumn-overlay-table'."
   ;; FIXME: Slow
-  (mapcar (lambda (ovr)
+  (when (vectorp cursorcolumn-overlay-table)
+    (mapc (lambda (ovr)
             (and ovr (delete-overlay ovr)))
-          cursorcolumn-overlay-table))
+          cursorcolumn-overlay-table)))
 
 (defsubst cursorcolumn-into-fringe-p ()
+  "Return non-nil if point is currently in the right fringe."
   ;; Disabled cursorcolumn-into-fringe-p because it is
   ;; slow (14%)
   nil
@@ -168,11 +209,13 @@ if `truncate-lines' is non-nil."
   )
 
 (defsubst cursorcolumn-visual-p ()
+  "Return non-nil if visual line column highlighting is active."
   (or (eq cursorcolumn-visual 'force)
       (and (not truncate-lines)
            cursorcolumn-visual)))
 
 (defsubst cursorcolumn-current-column ()
+  "Return the current column, adjusted for visual lines when enabled."
   (if (or (not (cursorcolumn-visual-p))
           ;; Margin for full-width char
           (< (1+ (current-column)) (window-width)))
@@ -213,8 +256,10 @@ buffer's invisibility specifications."
   )
 
 (defsubst cursorcolumn-forward (n)
+  "Move N lines forward (or backward if N is negative).
+N must be -1, 0, or 1."
   (unless (memq n '(-1 0 1))
-    (error "n(%s) must be 0 or 1" n))
+    (error "n(%s) must be -1, 0, or 1" n))
   (if (not (cursorcolumn-visual-p))
       (progn
         (forward-line n)
@@ -226,12 +271,15 @@ buffer's invisibility specifications."
           (if (< n 0)
               (while (and (not (bobp)) (cursorcolumn-invisible-p (point)))
                 (goto-char (previous-char-property-change (point))))
-            (while (and (not (bobp)) (cursorcolumn-invisible-p (point)))
+            (while (and (not (eobp)) (cursorcolumn-invisible-p (point)))
               (goto-char (next-char-property-change (point))))
             (forward-line 1))))
     (vertical-motion n)))
 
 (defun cursorcolumn-face (visual-p)
+  "Return the highlight face to use.
+If VISUAL-P is non-nil, return `cursorcolumn-visual-face'; otherwise return
+`cursorcolumn-face'."
   (if visual-p
       cursorcolumn-visual-face
     cursorcolumn-face))
@@ -240,13 +288,17 @@ buffer's invisibility specifications."
   "A more accurate alternative to (window-height).
 It calculates the number of lines in the current window, taking into
 consideration other changes in the window, such as text scaling."
-  (let ((beginning-line (line-number-at-pos (window-start)))
-        (end-line (line-number-at-pos (window-end))))
-    (+ 1 (- end-line beginning-line))))
+  (1+ (count-lines (window-start) (window-end nil t))))
 
 (defun cursorcolumn-show (&optional point)
+  "Display the cursor column highlight at POINT.
+If POINT is nil, use the current buffer point."
+  (unless (vectorp cursorcolumn-overlay-table)
+    (setq cursorcolumn-overlay-table
+          (make-vector cursorcolumn-overlay-table-size nil)))
   (save-excursion
-    (unless point
+    (if point
+        (goto-char point)
       (setq point (point)))
     (let* ((column (cursorcolumn-current-column))
            (lcolumn (current-column))
@@ -269,13 +321,14 @@ consideration other changes in the window, such as text scaling."
                   (< i window-height)
                   (< i (length cursorcolumn-overlay-table))
                   (not beginning-of-file))
-        (let ((cur-column (cursorcolumn-move-to-column column t))
-              (cur-line (line-number-at-pos)))
+        (let* ((cur-line (point))
+               (at-bob (bobp))
+               (cur-column (cursorcolumn-move-to-column column t)))
           ;; non-cursor line only (workaround of eol probrem.
           (when (and (/= (point) point)
                      (or (not previous-line)
                          (/= previous-line cur-line)))
-            (setq previous-line (line-number-at-pos))
+            (setq previous-line cur-line)
             ;; if column over the cursor's column (when tab or wide char is appered.
             (when (> cur-column column)
               (let ((lcol (current-column)))
@@ -286,7 +339,7 @@ consideration other changes in the window, such as text scaling."
                                  (> lcolumn (+ (current-column)
                                                (- column cur-column)))))
                    ;; consider a newline, tab and wide char.
-                   (str (concat (make-string (- column cur-column) ?\ )
+                   (str (concat (make-string (max 0 (- column cur-column)) ?\ )
                                 (if visual-p visual-line-str line-str)))
                    (char (char-after)))
               ;; create overlay if not found.
@@ -310,10 +363,12 @@ consideration other changes in the window, such as text scaling."
                ((memq char cursorcolumn-multiwidth-space-list)
                 (setq str
                       (concat str
-                              (make-string (- (save-excursion (forward-char)
-                                                              (current-column))
-                                              (current-column)
-                                              (string-width str))
+                              (make-string (max 0
+                                                (- (save-excursion
+                                                     (forward-char)
+                                                     (current-column))
+                                                   (current-column)
+                                                   (string-width str)))
                                            ?\ )))
                 (move-overlay ovr (point) (1+ (point)))
                 (overlay-put ovr 'invisible t)
@@ -354,10 +409,12 @@ consideration other changes in the window, such as text scaling."
           (setq i (1+ i))
 
           ;; Bug fix: Also include the first line
-          (when (bobp)
+          (when (or at-bob (bobp))
             (setq beginning-of-file t))
-          (setq previous-line (line-number-at-pos))
-          (cursorcolumn-forward -1))))))
+          (setq previous-line cur-line)
+          (cursorcolumn-forward -1)
+          (when (>= (point) cur-line)
+            (setq beginning-of-file t)))))))
 
 (provide 'cursorcolumn)
 ;;; cursorcolumn.el ends here
